@@ -2,7 +2,7 @@ name: my_store_app
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.7.2
+  sdk: ">=3.0.0 <4.0.0" # Updated to a more flexible range for Flutter 3.x
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -28,17 +28,20 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  cloud_firestore: ^5.6.8
-  cupertino_icons: ^1.0.8
-  firebase_auth: ^5.5.4
-  firebase_core: ^3.13.1
-  firebase_storage: ^12.4.6
   flutter:
     sdk: flutter
-  flutter_localization: ^0.3.2
+  flutter_localizations: # REQUIRED for localization with intl
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  firebase_core: ^3.13.1
+  firebase_auth: ^5.5.4
+  cloud_firestore: ^5.6.8
+  cloudinary_public: ^0.23.1
   image_picker: ^1.1.2
   provider: ^6.1.5
   url_launcher: ^6.3.1
+  intl: ^0.20.2 # This is correct for localization
 
 dev_dependencies:
   flutter_lints: ^5.0.0
@@ -49,14 +52,16 @@ dev_dependencies:
 # following page: https://dart.dev/tools/pub/pubspec
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  # To enable Flutter's localization generation
+  generate: true # Ensure this is directly under 'flutter:' and not duplicated.
+
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
+  assets:
+    - assets/images/
   #   - images/a_dot_ham.jpeg
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

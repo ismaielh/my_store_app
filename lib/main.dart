@@ -5,19 +5,18 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+// import 'package:firebase_storage/firebase_storage.dart'; // قم بالتعليق على هذا السطر أو حذفه
+import 'package:my_store_app/firebase_options.dart';
+import 'package:my_store_app/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-// You might need to import firebase_options.dart if you used flutterfire configure
-// import 'firebase_options.dart';
+import 'package:cloudinary_public/cloudinary_public.dart'; // استيراد حزمة Cloudinary
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
-    // If you used `flutterfire configure`, uncomment the line below:
-    // options: DefaultFirebaseOptions.currentPlatform,
+    options: DefaultFirebaseOptions.currentPlatform,
   );
   runApp(const MyApp());
 }
@@ -31,114 +30,132 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (ctx) => CartProvider()),
         ChangeNotifierProvider(create: (ctx) => UserProvider()),
+        ChangeNotifierProvider(
+            create: (ctx) =>
+                LocaleProvider()), // إضافة LocaleProvider
       ],
-      child: MaterialApp(
-        title: 'متجري الإلكتروني',
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('ar', ''),
-          Locale('en', ''),
-        ],
-        localeResolutionCallback: (locale, supportedLocales) {
-          for (var supportedLocale in supportedLocales) {
-            if (supportedLocale.languageCode ==
-                locale?.languageCode) {
-              return supportedLocale;
-            }
-          }
-          return supportedLocales.first;
+      child: Consumer<LocaleProvider>(
+        // استخدام Consumer للاستماع لتغييرات اللغة
+        builder: (context, localeProvider, child) {
+          return MaterialApp(
+            // استخدام الترجمة لعنوان التطبيق
+            onGenerateTitle: (context) =>
+                AppLocalizations.of(context)!.appName,
+            localizationsDelegates: const [
+              AppLocalizations
+                  .delegate, // إضافة delegate الخاص بالترجمة
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('ar', ''), // دعم اللغة العربية
+              Locale('en', ''), // دعم اللغة الإنجليزية
+            ],
+            locale: localeProvider
+                .locale, // تحديد اللغة بناءً على LocaleProvider
+            localeResolutionCallback:
+                (locale, supportedLocales) {
+              for (var supportedLocale in supportedLocales) {
+                if (supportedLocale.languageCode ==
+                    locale?.languageCode) {
+                  return supportedLocale;
+                }
+              }
+              return supportedLocales.first;
+            },
+            theme: ThemeData(
+              primarySwatch: Colors.blueGrey,
+              colorScheme: ColorScheme.fromSwatch(
+                primarySwatch: Colors.blueGrey,
+                accentColor: Colors.deepOrangeAccent,
+              ).copyWith(secondary: Colors.deepOrangeAccent),
+              // fontFamily: 'Cairo', // يمكنك تفعيل هذا الخط إذا كان لديك ملف الخط
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black87,
+                elevation: 0.5,
+                titleTextStyle: TextStyle(
+                  color: Colors.black87,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrangeAccent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 15,
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              inputDecorationTheme: InputDecorationTheme(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide:
+                      const BorderSide(color: Colors.grey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(
+                    color: Colors.blueGrey,
+                    width: 2,
+                  ),
+                ),
+                labelStyle:
+                    const TextStyle(color: Colors.black54),
+                hintStyle:
+                    const TextStyle(color: Colors.black38),
+                fillColor: Colors.grey[50],
+                filled: true,
+              ),
+              cardTheme: CardThemeData(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            home: StreamBuilder<User?>(
+              stream: FirebaseAuth.instance.authStateChanges(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState ==
+                    ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+                if (snapshot.hasData) {
+                  return FutureBuilder(
+                    future: Provider.of<UserProvider>(
+                      context,
+                      listen: false,
+                    ).fetchUserData(snapshot.data!.uid),
+                    builder: (context, userSnapshot) {
+                      if (userSnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      }
+                      return const HomeScreen();
+                    },
+                  );
+                }
+                return const AuthScreen();
+              },
+            ),
+          );
         },
-        theme: ThemeData(
-          primarySwatch: Colors.blueGrey,
-          colorScheme: ColorScheme.fromSwatch(
-            primarySwatch: Colors.blueGrey,
-            accentColor: Colors.deepOrangeAccent,
-          ).copyWith(secondary: Colors.deepOrangeAccent),
-          // fontFamily: 'Cairo', // Uncomment if you added Cairo font in pubspec.yaml
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black87,
-            elevation: 0.5,
-            titleTextStyle: TextStyle(
-              color: Colors.black87,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepOrangeAccent,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 30,
-                vertical: 15,
-              ),
-              textStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.grey),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Colors.blueGrey,
-                width: 2,
-              ),
-            ),
-            labelStyle: const TextStyle(color: Colors.black54),
-            hintStyle: const TextStyle(color: Colors.black38),
-            fillColor: Colors.grey[50],
-            filled: true,
-          ),
-          cardTheme: CardTheme(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        home: StreamBuilder<User?>(
-          stream: FirebaseAuth.instance.authStateChanges(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState ==
-                ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
-            }
-            if (snapshot.hasData) {
-              return FutureBuilder(
-                future: Provider.of<UserProvider>(
-                  context,
-                  listen: false,
-                ).fetchUserData(snapshot.data!.uid),
-                builder: (context, userSnapshot) {
-                  if (userSnapshot.connectionState ==
-                      ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  }
-                  return const HomeScreen();
-                },
-              );
-            }
-            return const AuthScreen();
-          },
-        ),
       ),
     );
   }
@@ -234,7 +251,6 @@ class UserModel {
   }
 }
 
-// Extension to allow copying UserModel with new values
 extension on UserModel {
   UserModel copyWith({String? name, String? address}) {
     return UserModel(
@@ -250,6 +266,23 @@ extension on UserModel {
 // =============================================================================
 // PROVIDERS (State Management)
 // =============================================================================
+
+class LocaleProvider with ChangeNotifier {
+  Locale? _locale;
+
+  Locale? get locale => _locale;
+
+  void setLocale(Locale locale) {
+    if (_locale == locale) return;
+    _locale = locale;
+    notifyListeners();
+  }
+
+  void clearLocale() {
+    _locale = null;
+    notifyListeners();
+  }
+}
 
 class CartProvider with ChangeNotifier {
   final List<CartItem> _items = [];
@@ -317,20 +350,21 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  String getWhatsAppMessage() {
+  String getWhatsAppMessage(BuildContext context) {
+    final appLocalizations = AppLocalizations.of(context)!;
     if (_items.isEmpty) {
-      return 'مرحباً، أود الاستفسار عن المنتجات المتوفرة في متجركم.';
+      return appLocalizations.whatsappInquiryMessage;
     }
 
-    String message = 'مرحباً، أود طلب المنتجات التالية:\n\n';
+    String message = appLocalizations.whatsappOrderStart;
     for (var i = 0; i < _items.length; i++) {
       final item = _items[i];
       message +=
-          '${i + 1}. ${item.product.name} (رقم: ${item.product.productNumber}) - الكمية: ${item.quantity}\n';
+          '${i + 1}. ${item.product.name} (${appLocalizations.productNumberShort}: ${item.product.productNumber}) - ${appLocalizations.quantity}: ${item.quantity}\n';
     }
     message +=
-        '\nالإجمالي: ${totalAmount.toStringAsFixed(2)} ر.س';
-    message += '\n\nالرجاء تأكيد الطلب.';
+        '\n${appLocalizations.total}: ${totalAmount.toStringAsFixed(2)} ${appLocalizations.currencySymbol}';
+    message += '\n\n${appLocalizations.whatsappConfirmOrder}';
     return message;
   }
 }
@@ -348,11 +382,11 @@ class UserProvider with ChangeNotifier {
 
   Future<void> fetchUserData(String uid) async {
     _isLoading = true;
-    notifyListeners();
     try {
       _currentUser = await _firestoreService.getUser(uid);
       _isAdmin = _currentUser?.isAdmin ?? false;
     } catch (e) {
+      // For production, consider using a logging framework instead of print
       print('Error fetching user data: $e');
       _currentUser = null;
       _isAdmin = false;
@@ -379,6 +413,7 @@ class UserProvider with ChangeNotifier {
         address: address,
       );
     } catch (e) {
+      // For production, consider using a logging framework instead of print
       print('Error updating user data: $e');
     } finally {
       _isLoading = false;
@@ -408,17 +443,19 @@ class AuthService {
     String address,
   ) async {
     try {
-      UserCredential result = await _auth
-          .createUserWithEmailAndPassword(
-            email: email,
-            password: password,
-          );
+      UserCredential result =
+          await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
       User? user = result.user;
 
       if (user != null) {
-        bool isAdmin =
-            (email ==
-                'admin@example.com'); // IMPORTANT: Change this to your actual admin email
+        // إرسال بريد التحقق بعد إنشاء الحساب
+        await user.sendEmailVerification();
+
+        bool isAdmin = (email ==
+            'admin@example.com'); // IMPORTANT: Change this to your actual admin email
         await _firestoreService.createUser(
           UserModel(
             uid: user.uid,
@@ -431,9 +468,11 @@ class AuthService {
       }
       return user;
     } on FirebaseAuthException catch (e) {
+      // For production, consider using a logging framework instead of print
       print('Firebase Auth Error (Register): ${e.message}');
       throw Exception(e.message);
     } catch (e) {
+      // For production, consider using a logging framework instead of print
       print('Error (Register): $e');
       throw Exception('حدث خطأ أثناء إنشاء الحساب.');
     }
@@ -444,16 +483,30 @@ class AuthService {
     String password,
   ) async {
     try {
-      UserCredential result = await _auth
-          .signInWithEmailAndPassword(
-            email: email,
-            password: password,
-          );
-      return result.user;
+      UserCredential result =
+          await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      User? user = result.user;
+
+      // التحقق من البريد الإلكتروني بعد تسجيل الدخول
+      if (user != null && !user.emailVerified) {
+        // يمكن إرسال بريد التحقق مرة أخرى إذا لم يتم التحقق منه
+        // await user.sendEmailVerification(); // اختياري: أعد إرسال البريد عند محاولة تسجيل الدخول
+        throw FirebaseAuthException(
+          code: 'email-not-verified',
+          message:
+              'البريد الإلكتروني لم يتم التحقق منه. الرجاء التحقق من بريدك.',
+        );
+      }
+      return user;
     } on FirebaseAuthException catch (e) {
+      // For production, consider using a logging framework instead of print
       print('Firebase Auth Error (Login): ${e.message}');
       throw Exception(e.message);
     } catch (e) {
+      // For production, consider using a logging framework instead of print
       print('Error (Login): $e');
       throw Exception('حدث خطأ أثناء تسجيل الدخول.');
     }
@@ -463,6 +516,7 @@ class AuthService {
     try {
       return await _auth.signOut();
     } catch (e) {
+      // For production, consider using a logging framework instead of print
       print('Error (Sign Out): $e');
       throw Exception('حدث خطأ أثناء تسجيل الخروج.');
     }
@@ -476,11 +530,13 @@ class AuthService {
     try {
       await _auth.sendPasswordResetEmail(email: email);
     } on FirebaseAuthException catch (e) {
+      // For production, consider using a logging framework instead of print
       print(
         'Firebase Auth Error (Reset Password): ${e.message}',
       );
       throw Exception(e.message);
     } catch (e) {
+      // For production, consider using a logging framework instead of print
       print('Error (Reset Password): $e');
       throw Exception(
         'حدث خطأ أثناء إرسال بريد إعادة تعيين كلمة المرور.',
@@ -521,10 +577,10 @@ class FirestoreService {
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => Product.fromFirestore(doc))
-              .toList();
-        });
+      return snapshot.docs
+          .map((doc) => Product.fromFirestore(doc))
+          .toList();
+    });
   }
 
   Future<void> addProduct(Product product) async {
@@ -544,22 +600,44 @@ class FirestoreService {
 }
 
 class StorageService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  // قم بتغيير هذه القيم إلى بيانات اعتماد Cloudinary الخاصة بك
+  final CloudinaryPublic cloudinary = CloudinaryPublic(
+    'dva0b4u0g', // <<< استبدل بـ Cloud Name الخاص بك
+    'my_store_unsigned_upload', // <<< ستحتاج لإنشاء Upload Preset في Cloudinary
+    cache: false,
+  );
+
+  // ملاحظة: API Key و API Secret لا تستخدم مباشرة هنا للرفع العام (unsigned upload).
+  // ولكنك ستحتاج إلى API Secret إذا كنت ستستخدم Signed Uploads أو API Calls أخرى.
+  // لغرض الأمان، يفضل استخدام Signed Uploads عبر خادم خلفي.
 
   Future<String> uploadProductImage(
     File imageFile,
-    String productId,
+    String
+        productId, // يمكن استخدام هذا كـ public_id في Cloudinary
   ) async {
     try {
-      Reference ref = _storage
-          .ref()
-          .child('product_images')
-          .child('$productId.jpg');
-      UploadTask uploadTask = ref.putFile(imageFile);
-      TaskSnapshot snapshot = await uploadTask;
-      String downloadUrl = await snapshot.ref.getDownloadURL();
-      return downloadUrl;
+      final response = await cloudinary.uploadFile(
+        CloudinaryFile.fromFile(
+          imageFile.path,
+          resourceType: CloudinaryResourceType.Image,
+          folder:
+              'product_images', // المجلد الذي ستحفظ فيه الصور في Cloudinary
+          publicId:
+              productId, // اسم الملف في Cloudinary (يمكن أن يكون فريداً)
+        ),
+      );
+      // For production, consider using a logging framework instead of print
+      print('Cloudinary Upload Response: ${response.secureUrl}');
+      return response
+          .secureUrl; // هذا هو رابط الصورة الآمن (HTTPS)
+    } on CloudinaryException catch (e) {
+      // For production, consider using a logging framework instead of print
+      print('Cloudinary Error: ${e.message}');
+      throw Exception(
+          'فشل تحميل الصورة إلى Cloudinary: ${e.message}');
     } catch (e) {
+      // For production, consider using a logging framework instead of print
       print('Error uploading image: $e');
       throw Exception('فشل تحميل الصورة.');
     }
@@ -567,10 +645,38 @@ class StorageService {
 
   Future<void> deleteProductImage(String imageUrl) async {
     try {
-      Reference ref = _storage.refFromURL(imageUrl);
-      await ref.delete();
+      // لاستخدام deleteResource، ستحتاج إلى API Key و API Secret
+      // وهذه العملية يجب أن تتم من خادم خلفي (مثل Firebase Functions) للأمان.
+      // إذا كنت تستخدمها مباشرة من العميل، فإنك تعرض API Secret الخاص بك.
+
+      // استخراج الـ publicId من الـ URL
+      // مثال: https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/v12345/product_images/some_product_id.jpg
+      final uri = Uri.parse(imageUrl);
+      final pathSegments = uri.pathSegments;
+      if (pathSegments.length >= 3) {
+        final publicIdWithExtension =
+            pathSegments.last; // e.g., some_product_id.jpg
+        final folder = pathSegments[
+            pathSegments.length - 2]; // e.g., product_images
+        final publicId =
+            '$folder/${publicIdWithExtension.split('.').first}'; // e.g., product_images/some_product_id
+
+        // هذه العملية تتطلب توقيع (signature) أو API Key و API Secret
+        // وهي غير مدعومة مباشرة بـ cloudinary_public للعميل.
+        // ستحتاج إلى استخدام Cloudinary SDK على خادم خلفي (Node.js, Python, etc.)
+        // أو استخدام Signed Uploads مع حذف مؤقت.
+        // For production, consider using a logging framework instead of print
+        print(
+            'Cloudinary delete is complex from client-side. Skipping for now.');
+        print(
+            'To delete, you typically need a backend to call Cloudinary API with API Secret.');
+        // For now, we will just print a message.
+        // In a real app, you would send a request to your backend to delete the image.
+      }
     } catch (e) {
-      print('Error deleting image: $e');
+      // For production, consider using a logging framework instead of print
+      print(
+          'Error deleting image from Cloudinary (client-side attempt): $e');
     }
   }
 }
@@ -593,6 +699,7 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appLocalizations = AppLocalizations.of(context)!;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -636,12 +743,11 @@ class ProductCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${product.price.toStringAsFixed(2)} ر.س',
+                    '${product.price.toStringAsFixed(2)} ${appLocalizations.currencySymbol}',
                     style: TextStyle(
-                      color:
-                          Theme.of(
-                            context,
-                          ).colorScheme.secondary,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.secondary,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -655,7 +761,7 @@ class ProductCard extends StatelessWidget {
                         Icons.add_shopping_cart,
                         size: 18,
                       ),
-                      label: const Text('أضف للسلة'),
+                      label: Text(appLocalizations.addToCart),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -698,7 +804,13 @@ class _AuthScreenState extends State<AuthScreen> {
 
   final AuthService _authService = AuthService();
 
+  final TextEditingController _passwordController =
+      TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+
   void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -709,6 +821,7 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _submitAuthForm() async {
+    final appLocalizations = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -726,6 +839,16 @@ class _AuthScreenState extends State<AuthScreen> {
           _password,
         );
       } else {
+        if (_password != _confirmPassword) {
+          _showSnackBar(appLocalizations.passwordMismatch,
+              isError: true);
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+          return;
+        }
         user = await _authService.registerWithEmailAndPassword(
           _email,
           _password,
@@ -735,47 +858,77 @@ class _AuthScreenState extends State<AuthScreen> {
       }
 
       if (user != null) {
-        await Provider.of<UserProvider>(
-          context,
-          listen: false,
-        ).fetchUserData(user.uid);
-        _showSnackBar(
-          _isLogin
-              ? 'تم تسجيل الدخول بنجاح!'
-              : 'تم إنشاء الحساب بنجاح!',
-        );
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (ctx) => const HomeScreen(),
-          ),
-        );
+        if (_isLogin) {
+          await Provider.of<UserProvider>(
+            context,
+            listen: false,
+          ).fetchUserData(user.uid);
+          _showSnackBar(appLocalizations.loggedInSuccessfully);
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (ctx) => const HomeScreen(),
+              ),
+            );
+          }
+        } else {
+          // بعد التسجيل، لا نسجل الدخول تلقائياً حتى يتم التحقق من البريد
+          _showSnackBar(
+              appLocalizations.emailVerificationNeeded);
+          _showSnackBar(appLocalizations.emailVerificationSent);
+          // نعود إلى شاشة تسجيل الدخول ليقوم المستخدم بتسجيل الدخول بعد التحقق
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (ctx) => const AuthScreen(),
+              ),
+            );
+          }
+        }
       }
     } on FirebaseAuthException catch (e) {
-      String errorMessage = 'حدث خطأ في المصادقة.';
+      String errorMessage = appLocalizations.authError;
       if (e.code == 'user-not-found') {
-        errorMessage = 'لا يوجد مستخدم بهذا البريد الإلكتروني.';
+        errorMessage = appLocalizations.userNotFound;
       } else if (e.code == 'wrong-password') {
-        errorMessage = 'كلمة المرور غير صحيحة.';
+        errorMessage = appLocalizations.wrongPassword;
       } else if (e.code == 'email-already-in-use') {
-        errorMessage = 'هذا البريد الإلكتروني مستخدم بالفعل.';
+        errorMessage = appLocalizations.emailAlreadyInUse;
       } else if (e.code == 'weak-password') {
-        errorMessage = 'كلمة المرور ضعيفة جداً.';
+        errorMessage = appLocalizations.weakPassword;
+      } else if (e.code == 'invalid-email') {
+        errorMessage = appLocalizations.invalidEmail;
+      } else if (e.code == 'network-request-failed') {
+        errorMessage = appLocalizations.networkError;
+      } else if (e.code == 'email-not-verified') {
+        // خطأ مخصص للتحقق من البريد
+        errorMessage = appLocalizations.verifyEmailToLogin;
       }
       _showSnackBar(errorMessage, isError: true);
     } catch (e) {
       _showSnackBar(
-        e.toString().replaceFirst('Exception: ', ''),
+        '${appLocalizations.errorOccurred}${e.toString().replaceFirst('Exception: ', '')}',
         isError: true,
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final appLocalizations = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
@@ -785,7 +938,7 @@ class _AuthScreenState extends State<AuthScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'متجري',
+                appLocalizations.appName,
                 style: TextStyle(
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
@@ -800,14 +953,14 @@ class _AuthScreenState extends State<AuthScreen> {
                     TextFormField(
                       key: const ValueKey('email'),
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'البريد الإلكتروني',
-                        prefixIcon: Icon(Icons.email),
+                      decoration: InputDecoration(
+                        labelText: appLocalizations.email,
+                        prefixIcon: const Icon(Icons.email),
                       ),
                       validator: (value) {
                         if (value == null ||
                             !value.contains('@')) {
-                          return 'الرجاء إدخال بريد إلكتروني صالح.';
+                          return appLocalizations.emailRequired;
                         }
                         return null;
                       },
@@ -818,14 +971,15 @@ class _AuthScreenState extends State<AuthScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       key: const ValueKey('password'),
+                      controller: _passwordController,
                       obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'كلمة المرور',
-                        prefixIcon: Icon(Icons.lock),
+                      decoration: InputDecoration(
+                        labelText: appLocalizations.password,
+                        prefixIcon: const Icon(Icons.lock),
                       ),
                       validator: (value) {
                         if (value == null || value.length < 6) {
-                          return 'كلمة المرور يجب أن تتكون من 6 أحرف على الأقل.';
+                          return appLocalizations.passwordLength;
                         }
                         return null;
                       },
@@ -839,18 +993,23 @@ class _AuthScreenState extends State<AuthScreen> {
                         children: [
                           TextFormField(
                             key: const ValueKey(
-                              'confirm_password',
-                            ),
+                                'confirm_password'),
+                            controller:
+                                _confirmPasswordController,
                             obscureText: true,
-                            decoration: const InputDecoration(
-                              labelText: 'تأكيد كلمة المرور',
-                              prefixIcon: Icon(Icons.lock_reset),
+                            decoration: InputDecoration(
+                              labelText: appLocalizations
+                                  .confirmPassword,
+                              prefixIcon:
+                                  const Icon(Icons.lock_reset),
                             ),
                             validator: (value) {
                               if (value == null ||
                                   value.trim() !=
-                                      _password.trim()) {
-                                return 'كلمة المرور غير متطابقة.';
+                                      _passwordController.text
+                                          .trim()) {
+                                return appLocalizations
+                                    .passwordMismatch;
                               }
                               return null;
                             },
@@ -861,9 +1020,11 @@ class _AuthScreenState extends State<AuthScreen> {
                           const SizedBox(height: 16),
                           TextFormField(
                             key: const ValueKey('name'),
-                            decoration: const InputDecoration(
-                              labelText: 'الاسم (اختياري)',
-                              prefixIcon: Icon(Icons.person),
+                            decoration: InputDecoration(
+                              labelText:
+                                  appLocalizations.nameOptional,
+                              prefixIcon:
+                                  const Icon(Icons.person),
                             ),
                             onSaved: (value) {
                               _name = value!.trim();
@@ -872,9 +1033,10 @@ class _AuthScreenState extends State<AuthScreen> {
                           const SizedBox(height: 16),
                           TextFormField(
                             key: const ValueKey('address'),
-                            decoration: const InputDecoration(
-                              labelText: 'العنوان (اختياري)',
-                              prefixIcon: Icon(
+                            decoration: InputDecoration(
+                              labelText: appLocalizations
+                                  .addressOptional,
+                              prefixIcon: const Icon(
                                 Icons.location_on,
                               ),
                             ),
@@ -889,24 +1051,30 @@ class _AuthScreenState extends State<AuthScreen> {
                     _isLoading
                         ? const CircularProgressIndicator()
                         : ElevatedButton(
-                          onPressed: _submitAuthForm,
-                          child: Text(
-                            _isLogin
-                                ? 'تسجيل الدخول'
-                                : 'إنشاء حساب',
+                            onPressed: _submitAuthForm,
+                            child: Text(
+                              _isLogin
+                                  ? appLocalizations.login
+                                  : appLocalizations
+                                      .createAccount,
+                            ),
                           ),
-                        ),
                     const SizedBox(height: 10),
                     TextButton(
                       onPressed: () {
-                        setState(() {
-                          _isLogin = !_isLogin;
-                        });
+                        if (mounted) {
+                          setState(() {
+                            _isLogin = !_isLogin;
+                            _passwordController.clear();
+                            _confirmPasswordController.clear();
+                            _formKey.currentState?.reset();
+                          });
+                        }
                       },
                       child: Text(
                         _isLogin
-                            ? 'ليس لديك حساب؟ أنشئ حساباً الآن'
-                            : 'لديك حساب بالفعل؟ تسجيل الدخول',
+                            ? appLocalizations.noAccount
+                            : appLocalizations.haveAccount,
                         style: TextStyle(
                           color: Theme.of(context).primaryColor,
                         ),
@@ -918,36 +1086,38 @@ class _AuthScreenState extends State<AuthScreen> {
                           if (_email.isEmpty ||
                               !_email.contains('@')) {
                             _showSnackBar(
-                              'الرجاء إدخال بريد إلكتروني صالح لإعادة تعيين كلمة المرور.',
+                              appLocalizations.emailRequired,
                               isError: true,
                             );
                             return;
                           }
                           try {
-                            setState(() {
-                              _isLoading = true;
-                            });
+                            if (mounted) {
+                              setState(() {
+                                _isLoading = true;
+                              });
+                            }
                             await _authService
                                 .sendPasswordResetEmail(_email);
                             _showSnackBar(
-                              'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.',
+                              appLocalizations
+                                  .resetPasswordEmailSent,
                             );
                           } catch (e) {
                             _showSnackBar(
-                              e.toString().replaceFirst(
-                                'Exception: ',
-                                '',
-                              ),
+                              '${appLocalizations.sendResetEmailError}${e.toString().replaceFirst('Exception: ', '')}',
                               isError: true,
                             );
                           } finally {
-                            setState(() {
-                              _isLoading = false;
-                            });
+                            if (mounted) {
+                              setState(() {
+                                _isLoading = false;
+                              });
+                            }
                           }
                         },
                         child: Text(
-                          'هل نسيت كلمة المرور؟',
+                          appLocalizations.forgotPassword,
                           style: TextStyle(
                             color:
                                 Theme.of(context).primaryColor,
@@ -980,19 +1150,21 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final cartProvider = Provider.of<CartProvider>(context);
     final userProvider = Provider.of<UserProvider>(context);
+    final appLocalizations = AppLocalizations.of(context)!;
+    final localeProvider = Provider.of<LocaleProvider>(context,
+        listen: false); // للوصول لـ setLocale
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('المنتجات'),
+        title: Text(appLocalizations.homeTitle),
         centerTitle: true,
         leading: Builder(
-          builder:
-              (context) => IconButton(
-                icon: const Icon(Icons.menu),
-                onPressed: () {
-                  Scaffold.of(context).openDrawer();
-                },
-              ),
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+          ),
         ),
         actions: [
           Stack(
@@ -1000,11 +1172,13 @@ class _HomeScreenState extends State<HomeScreen> {
               IconButton(
                 icon: const Icon(Icons.shopping_cart),
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (ctx) => const CartScreen(),
-                    ),
-                  );
+                  if (mounted) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (ctx) => const CartScreen(),
+                      ),
+                    );
+                  }
                 },
               ),
               if (cartProvider.itemCount > 0)
@@ -1042,7 +1216,8 @@ class _HomeScreenState extends State<HomeScreen> {
           children: <Widget>[
             UserAccountsDrawerHeader(
               accountName: Text(
-                userProvider.currentUser?.name ?? 'مستخدم جديد',
+                userProvider.currentUser?.name ??
+                    appLocalizations.newUser,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -1070,57 +1245,81 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.home),
-              title: const Text('الرئيسية'),
+              title: Text(appLocalizations.home),
               onTap: () {
-                Navigator.pop(context);
+                if (mounted) {
+                  Navigator.pop(context);
+                }
               },
             ),
             ListTile(
               leading: const Icon(Icons.settings),
-              title: const Text('إعدادات الحساب'),
+              title: Text(appLocalizations.settingsTitle),
               onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (ctx) => const UserSettingsScreen(),
-                  ),
-                );
+                if (mounted) {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (ctx) =>
+                          const UserSettingsScreen(),
+                    ),
+                  );
+                }
               },
             ),
             if (userProvider.isAdmin)
               ListTile(
                 leading: const Icon(Icons.admin_panel_settings),
-                title: const Text('لوحة تحكم الأدمن'),
+                title: Text(appLocalizations.adminPanelTitle),
                 onTap: () {
-                  Navigator.pop(context);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (ctx) => const AdminPanelScreen(),
-                    ),
-                  );
+                  if (mounted) {
+                    Navigator.pop(context);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (ctx) =>
+                            const AdminPanelScreen(),
+                      ),
+                    );
+                  }
                 },
               ),
+            // خيار تغيير اللغة
+            ListTile(
+              leading: const Icon(Icons.language),
+              title: Text(appLocalizations.changeLanguage),
+              onTap: () {
+                if (mounted) {
+                  Navigator.pop(context); // إغلاق الدرج
+                  _showLanguagePickerDialog(
+                      context, localeProvider);
+                }
+              },
+            ),
             const Divider(),
             ListTile(
               leading: const Icon(
                 Icons.logout,
                 color: Colors.red,
               ),
-              title: const Text(
-                'تسجيل الخروج',
-                style: TextStyle(color: Colors.red),
+              title: Text(
+                appLocalizations.logout,
+                style: const TextStyle(color: Colors.red),
               ),
               onTap: () async {
-                Navigator.pop(context);
+                if (mounted) {
+                  Navigator.pop(context);
+                }
                 await _authService.signOut();
                 userProvider.clearUser();
                 cartProvider.clearCart();
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (ctx) => const AuthScreen(),
-                  ),
-                  (Route<dynamic> route) => false,
-                );
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (ctx) => const AuthScreen(),
+                    ),
+                    (Route<dynamic> route) => false,
+                  );
+                }
               },
             ),
           ],
@@ -1138,18 +1337,19 @@ class _HomeScreenState extends State<HomeScreen> {
           if (snapshot.hasError) {
             return Center(
               child: Text(
-                'خطأ في تحميل المنتجات: ${snapshot.error}',
+                '${appLocalizations.loadingProductsError}${snapshot.error}',
               ),
             );
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                'لا توجد منتجات حالياً.',
-                style: TextStyle(
+                appLocalizations.noProducts,
+                style: const TextStyle(
                   fontSize: 18,
                   color: Colors.black54,
                 ),
+                textAlign: TextAlign.center,
               ),
             );
           }
@@ -1159,40 +1359,94 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.all(16.0),
             gridDelegate:
                 const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.75,
-                  crossAxisSpacing: 16.0,
-                  mainAxisSpacing: 16.0,
-                ),
+              crossAxisCount: 2,
+              childAspectRatio: 0.75,
+              crossAxisSpacing: 16.0,
+              mainAxisSpacing: 16.0,
+            ),
             itemCount: products.length,
             itemBuilder: (ctx, index) {
               final product = products[index];
               return ProductCard(
                 product: product,
-                onTap:
-                    () => Navigator.of(context).push(
+                onTap: () {
+                  if (mounted) {
+                    Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder:
-                            (ctx) => ProductDetailScreen(
-                              product: product,
-                            ),
+                        builder: (ctx) => ProductDetailScreen(
+                          product: product,
+                        ),
                       ),
-                    ),
+                    );
+                  }
+                },
                 onAddToCart: () {
                   cartProvider.addItem(product);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'تم إضافة ${product.name} إلى السلة!',
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          appLocalizations
+                              .productAddedToCart(product.name),
+                        ),
+                        duration: const Duration(seconds: 1),
                       ),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
+                    );
+                  }
                 },
               );
             },
           );
         },
+      ),
+    );
+  }
+
+  // دالة لعرض مربع حوار اختيار اللغة
+  void _showLanguagePickerDialog(
+      BuildContext context, LocaleProvider localeProvider) {
+    final appLocalizations = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(appLocalizations.selectLanguage),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('English'),
+              onTap: () {
+                localeProvider.setLocale(const Locale('en', ''));
+                if (mounted) {
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(appLocalizations
+                          .languageChangedSuccessfully),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+            ),
+            ListTile(
+              title: const Text('العربية'),
+              onTap: () {
+                localeProvider.setLocale(const Locale('ar', ''));
+                if (mounted) {
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(appLocalizations
+                          .languageChangedSuccessfully),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1213,6 +1467,7 @@ class _ProductDetailScreenState
   int _quantity = 1;
 
   void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -1228,6 +1483,7 @@ class _ProductDetailScreenState
       context,
       listen: false,
     );
+    final appLocalizations = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.product.name)),
@@ -1266,7 +1522,7 @@ class _ProductDetailScreenState
             ),
             const SizedBox(height: 10),
             Text(
-              '${widget.product.price.toStringAsFixed(2)} ر.س',
+              '${widget.product.price.toStringAsFixed(2)} ${appLocalizations.currencySymbol}',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -1275,7 +1531,7 @@ class _ProductDetailScreenState
             ),
             const SizedBox(height: 10),
             Text(
-              'رقم المنتج: ${widget.product.productNumber}',
+              '${appLocalizations.productNumberShort}: ${widget.product.productNumber}',
               style: const TextStyle(
                 fontSize: 16,
                 color: Colors.black54,
@@ -1293,9 +1549,11 @@ class _ProductDetailScreenState
                 IconButton(
                   icon: const Icon(Icons.remove_circle),
                   onPressed: () {
-                    setState(() {
-                      if (_quantity > 1) _quantity--;
-                    });
+                    if (mounted) {
+                      setState(() {
+                        if (_quantity > 1) _quantity--;
+                      });
+                    }
                   },
                 ),
                 Text(
@@ -1308,9 +1566,11 @@ class _ProductDetailScreenState
                 IconButton(
                   icon: const Icon(Icons.add_circle),
                   onPressed: () {
-                    setState(() {
-                      _quantity++;
-                    });
+                    if (mounted) {
+                      setState(() {
+                        _quantity++;
+                      });
+                    }
                   },
                 ),
               ],
@@ -1324,11 +1584,14 @@ class _ProductDetailScreenState
                     quantity: _quantity,
                   );
                   _showSnackBar(
-                    'تم إضافة ${widget.product.name} (الكمية: $_quantity) إلى السلة!',
+                    appLocalizations.productQuantityAddedToCart(
+                      widget.product.name,
+                      _quantity,
+                    ),
                   );
                 },
                 icon: const Icon(Icons.add_shopping_cart),
-                label: const Text('أضف إلى السلة'),
+                label: Text(appLocalizations.addToCart),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 40,
@@ -1361,281 +1624,357 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _sendOrderViaWhatsApp(
-    BuildContext context,
-    String message,
-  ) async {
-    const String whatsappNumber =
-        '+966501234567'; // IMPORTANT: Change this to your actual WhatsApp number
+  // Helper to launch WhatsApp
+  Future<void> _launchWhatsApp({
+    required BuildContext context,
+    required String phoneNumber,
+    required String message,
+    String?
+        appPackage, // e.g., 'com.whatsapp' or 'com.whatsapp.w4b' for Android
+  }) async {
+    final appLocalizations = AppLocalizations.of(context)!;
+    String url =
+        'whatsapp://send?phone=$phoneNumber&text=${Uri.encodeComponent(message)}';
 
-    final whatsappUrl = Uri.parse(
-      'whatsapp://send?phone=$whatsappNumber&text=${Uri.encodeComponent(message)}',
-    );
-
-    if (await canLaunchUrl(whatsappUrl)) {
-      await launchUrl(whatsappUrl);
+    // On Android, we can try to target a specific package.
+    // On iOS, the 'whatsapp://' scheme usually opens the correct app if installed.
+    // For a more robust solution on Android, consider `url_launcher_android` to specify package.
+    if (Platform.isAndroid && appPackage != null) {
+      try {
+        // This is a common way to try specific package on Android, but not guaranteed on all devices/versions.
+        // It tries to open the URL, and if it fails, it might fall back to general intent.
+        bool launched = await launchUrl(
+          Uri.parse(url),
+          mode: LaunchMode.externalApplication,
+        );
+        if (!launched) {
+          // Fallback to general URL if specific package launch fails
+          await launchUrl(Uri.parse(url),
+              mode: LaunchMode.externalApplication);
+        }
+      } catch (e) {
+        print(
+            'Error trying to launch specific WhatsApp package: $e'); // For debug
+        // Fallback to general launch if specific package launch throws an error
+        try {
+          await launchUrl(Uri.parse(url),
+              mode: LaunchMode.externalApplication);
+        } catch (e) {
+          _showSnackBar(
+            context,
+            appLocalizations.whatsappNotInstalled,
+            isError: true,
+          );
+          print(
+              'Error launching WhatsApp (general fallback): $e'); // For debug
+        }
+      }
     } else {
-      _showSnackBar(
-        context,
-        'لا يمكن فتح واتساب. تأكد من تثبيته على جهازك.',
-        isError: true,
-      );
+      // For iOS and others, general launch usually works
+      try {
+        await launchUrl(Uri.parse(url),
+            mode: LaunchMode.externalApplication);
+      } catch (e) {
+        _showSnackBar(
+          context,
+          appLocalizations.whatsappNotInstalled,
+          isError: true,
+        );
+        print(
+            'Error launching WhatsApp (iOS/general): $e'); // For debug
+      }
     }
+  }
+
+  Future<void> _showWhatsAppChoiceDialog(
+      BuildContext context, String message) async {
+    final appLocalizations = AppLocalizations.of(context)!;
+    const String whatsappNumber =
+        '+966980756485'; // الرقم الجديد للواتساب
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(appLocalizations.whatsappChoiceTitle),
+        content: Text(appLocalizations.whatsappChoiceMessage),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _launchWhatsApp(
+                context: context,
+                phoneNumber: whatsappNumber,
+                message: message,
+                appPackage:
+                    'com.whatsapp', // Standard WhatsApp package for Android
+              );
+            },
+            child: Text(appLocalizations.whatsappStandard),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _launchWhatsApp(
+                context: context,
+                phoneNumber: whatsappNumber,
+                message: message,
+                appPackage:
+                    'com.whatsapp.w4b', // WhatsApp Business package for Android
+              );
+            },
+            child: Text(appLocalizations.whatsappBusiness),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final cartProvider = Provider.of<CartProvider>(context);
+    final appLocalizations = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('سلة الشراء')),
-      body:
-          cartProvider.items.isEmpty
-              ? const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.shopping_cart_outlined,
-                      size: 80,
-                      color: Colors.grey,
-                    ),
-                    SizedBox(height: 20),
-                    Text(
-                      'سلة الشراء فارغة!',
-                      style: TextStyle(
-                        fontSize: 20,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    Text(
-                      'أضف بعض المنتجات لتبدأ التسوق.',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-              : Column(
+      appBar: AppBar(title: Text(appLocalizations.cartTitle)),
+      body: cartProvider.items.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16.0),
-                      itemCount: cartProvider.items.length,
-                      itemBuilder: (ctx, index) {
-                        final cartItem =
-                            cartProvider.items[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            vertical: 8.0,
-                          ),
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              12,
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Row(
-                              children: [
-                                ClipRRect(
-                                  borderRadius:
-                                      BorderRadius.circular(8.0),
-                                  child: Image.network(
-                                    cartItem.product.imageUrl,
-                                    width: 80,
-                                    height: 80,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (
-                                      context,
-                                      error,
-                                      stackTrace,
-                                    ) {
-                                      return Container(
-                                        width: 80,
-                                        height: 80,
-                                        color: Colors.grey[200],
-                                        child: const Icon(
-                                          Icons
-                                              .image_not_supported,
-                                          size: 40,
-                                          color: Colors.grey,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        cartItem.product.name,
-                                        style: const TextStyle(
-                                          fontWeight:
-                                              FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                        maxLines: 2,
-                                        overflow:
-                                            TextOverflow
-                                                .ellipsis,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${cartItem.product.price.toStringAsFixed(2)} ر.س',
-                                        style: TextStyle(
-                                          color:
-                                              Theme.of(context)
-                                                  .colorScheme
-                                                  .secondary,
-                                          fontSize: 14,
-                                          fontWeight:
-                                              FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(
-                                              Icons
-                                                  .remove_circle_outline,
-                                            ),
-                                            onPressed: () {
-                                              cartProvider
-                                                  .decreaseQuantity(
-                                                    cartItem
-                                                        .product
-                                                        .id,
-                                                  );
-                                            },
-                                          ),
-                                          Text(
-                                            '${cartItem.quantity}',
-                                            style:
-                                                const TextStyle(
-                                                  fontSize: 16,
-                                                ),
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(
-                                              Icons
-                                                  .add_circle_outline,
-                                            ),
-                                            onPressed: () {
-                                              cartProvider
-                                                  .increaseQuantity(
-                                                    cartItem
-                                                        .product
-                                                        .id,
-                                                  );
-                                            },
-                                          ),
-                                          const Spacer(),
-                                          IconButton(
-                                            icon: const Icon(
-                                              Icons.delete,
-                                              color: Colors.red,
-                                            ),
-                                            onPressed: () {
-                                              cartProvider
-                                                  .removeItem(
-                                                    cartItem
-                                                        .product
-                                                        .id,
-                                                  );
-                                              _showSnackBar(
-                                                context,
-                                                'تم حذف المنتج من السلة.',
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                  const Icon(
+                    Icons.shopping_cart_outlined,
+                    size: 80,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    appLocalizations.cartEmpty,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      color: Colors.black54,
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'الإجمالي:',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              '${cartProvider.totalAmount.toStringAsFixed(2)} ر.س',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    Theme.of(
-                                      context,
-                                    ).colorScheme.secondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            _sendOrderViaWhatsApp(
-                              context,
-                              cartProvider.getWhatsAppMessage(),
-                            );
-                            cartProvider.clearCart();
-                            _showSnackBar(
-                              context,
-                              'تم إرسال الطلب عبر واتساب!',
-                            );
-                          },
-                          icon: Icon(Icons.facebook),
-                          label: const Text(
-                            'إرسال الطلب عبر واتساب',
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(
-                              double.infinity,
-                              50,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        TextButton(
-                          onPressed: () {
-                            cartProvider.clearCart();
-                            _showSnackBar(
-                              context,
-                              'تم إفراغ السلة.',
-                            );
-                          },
-                          child: const Text('إفراغ السلة'),
-                        ),
-                      ],
+                  Text(
+                    appLocalizations.addProductsToShop,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.black54,
                     ),
                   ),
                 ],
               ),
+            )
+          : Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16.0),
+                    itemCount: cartProvider.items.length,
+                    itemBuilder: (ctx, index) {
+                      final cartItem = cartProvider.items[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                          vertical: 8.0,
+                        ),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            12,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius:
+                                    BorderRadius.circular(8.0),
+                                child: Image.network(
+                                  cartItem.product.imageUrl,
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (
+                                    context,
+                                    error,
+                                    stackTrace,
+                                  ) {
+                                    return Container(
+                                      width: 80,
+                                      height: 80,
+                                      color: Colors.grey[200],
+                                      child: const Icon(
+                                        Icons
+                                            .image_not_supported,
+                                        size: 40,
+                                        color: Colors.grey,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      cartItem.product.name,
+                                      style: const TextStyle(
+                                        fontWeight:
+                                            FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                      maxLines: 2,
+                                      overflow:
+                                          TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${cartItem.product.price.toStringAsFixed(2)} ${appLocalizations.currencySymbol}',
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .secondary,
+                                        fontSize: 14,
+                                        fontWeight:
+                                            FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons
+                                                .remove_circle_outline,
+                                          ),
+                                          onPressed: () {
+                                            cartProvider
+                                                .decreaseQuantity(
+                                              cartItem
+                                                  .product.id,
+                                            );
+                                          },
+                                        ),
+                                        Text(
+                                          '${cartItem.quantity}',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons
+                                                .add_circle_outline,
+                                          ),
+                                          onPressed: () {
+                                            cartProvider
+                                                .increaseQuantity(
+                                              cartItem
+                                                  .product.id,
+                                            );
+                                          },
+                                        ),
+                                        const Spacer(),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete,
+                                            color: Colors.red,
+                                          ),
+                                          onPressed: () {
+                                            cartProvider
+                                                .removeItem(
+                                              cartItem
+                                                  .product.id,
+                                            );
+                                            _showSnackBar(
+                                              context,
+                                              appLocalizations
+                                                  .productRemovedFromCart,
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            appLocalizations.total,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '${cartProvider.totalAmount.toStringAsFixed(2)} ${appLocalizations.currencySymbol}',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.secondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          _showWhatsAppChoiceDialog(
+                              context,
+                              cartProvider
+                                  .getWhatsAppMessage(context));
+                          cartProvider.clearCart();
+                          _showSnackBar(
+                            context,
+                            appLocalizations.orderSent,
+                          );
+                        },
+                        icon: const Icon(Icons.facebook),
+                        label: Text(
+                          appLocalizations.sendOrderWhatsApp,
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(
+                            double.infinity,
+                            50,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextButton(
+                        onPressed: () {
+                          cartProvider.clearCart();
+                          _showSnackBar(
+                            context,
+                            appLocalizations.cartCleared,
+                          );
+                        },
+                        child: Text(appLocalizations.clearCart),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
@@ -1679,6 +2018,7 @@ class _UserSettingsScreenState
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -1689,14 +2029,17 @@ class _UserSettingsScreenState
   }
 
   Future<void> _updateUserData() async {
+    final appLocalizations = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) {
       return;
     }
     _formKey.currentState!.save();
 
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
       final userProvider = Provider.of<UserProvider>(
@@ -1709,271 +2052,277 @@ class _UserSettingsScreenState
           _nameController.text.trim(),
           _addressController.text.trim(),
         );
-        _showSnackBar('تم حفظ التغييرات بنجاح!');
+        _showSnackBar(
+            appLocalizations.updateAccountSuccessfully);
       }
     } catch (e) {
       _showSnackBar(
-        'فشل حفظ التغييرات: ${e.toString().replaceFirst('Exception: ', '')}',
+        '${appLocalizations.updateUserDataError}${e.toString().replaceFirst('Exception: ', '')}',
         isError: true,
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _changePassword() async {
+    final appLocalizations = AppLocalizations.of(context)!;
     String? currentPassword;
     String? newPassword;
     String? confirmNewPassword;
 
     await showDialog(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: const Text('تغيير كلمة المرور'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'كلمة المرور الحالية',
-                    ),
-                    onChanged:
-                        (value) => currentPassword = value,
-                  ),
-                  TextField(
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText:
-                          'كلمة المرور الجديدة (6 أحرف على الأقل)',
-                    ),
-                    onChanged: (value) => newPassword = value,
-                  ),
-                  TextField(
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'تأكيد كلمة المرور الجديدة',
-                    ),
-                    onChanged:
-                        (value) => confirmNewPassword = value,
-                  ),
-                ],
+      builder: (ctx) => AlertDialog(
+        title: Text(appLocalizations.changePassword),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: appLocalizations.currentPassword,
+                ),
+                onChanged: (value) => currentPassword = value,
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                },
-                child: const Text('إلغاء'),
+              TextField(
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: appLocalizations.newPassword,
+                ),
+                onChanged: (value) => newPassword = value,
               ),
-              ElevatedButton(
-                onPressed: () async {
-                  if (newPassword == null ||
-                      newPassword!.length < 6) {
-                    _showSnackBar(
-                      'كلمة المرور الجديدة يجب أن تتكون من 6 أحرف على الأقل.',
-                      isError: true,
-                    );
-                    return;
-                  }
-                  if (newPassword != confirmNewPassword) {
-                    _showSnackBar(
-                      'كلمة المرور الجديدة غير متطابقة.',
-                      isError: true,
-                    );
-                    return;
-                  }
-                  if (currentPassword == null ||
-                      currentPassword!.isEmpty) {
-                    _showSnackBar(
-                      'الرجاء إدخال كلمة المرور الحالية.',
-                      isError: true,
-                    );
-                    return;
-                  }
-
-                  setState(() {
-                    _isLoading = true;
-                  });
-                  try {
-                    User? user =
-                        FirebaseAuth.instance.currentUser;
-                    if (user != null) {
-                      AuthCredential credential =
-                          EmailAuthProvider.credential(
-                            email: user.email!,
-                            password: currentPassword!,
-                          );
-                      await user.reauthenticateWithCredential(
-                        credential,
-                      );
-                      await user.updatePassword(newPassword!);
-                      _showSnackBar(
-                        'تم تغيير كلمة المرور بنجاح!',
-                      );
-                      Navigator.of(ctx).pop();
-                    }
-                  } on FirebaseAuthException catch (e) {
-                    String errorMessage =
-                        'فشل تغيير كلمة المرور.';
-                    if (e.code == 'wrong-password') {
-                      errorMessage =
-                          'كلمة المرور الحالية غير صحيحة.';
-                    } else if (e.code ==
-                        'requires-recent-login') {
-                      errorMessage =
-                          'الرجاء تسجيل الدخول مرة أخرى لتغيير كلمة المرور.';
-                    }
-                    _showSnackBar(errorMessage, isError: true);
-                  } catch (e) {
-                    _showSnackBar(
-                      'حدث خطأ: ${e.toString().replaceFirst('Exception: ', '')}',
-                      isError: true,
-                    );
-                  } finally {
-                    setState(() {
-                      _isLoading = false;
-                    });
-                  }
-                },
-                child: const Text('تغيير'),
+              TextField(
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: appLocalizations.confirmNewPassword,
+                ),
+                onChanged: (value) => confirmNewPassword = value,
               ),
             ],
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              if (mounted) {
+                Navigator.of(ctx).pop();
+              }
+            },
+            child: Text(appLocalizations.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (newPassword == null ||
+                  newPassword!.length < 6) {
+                _showSnackBar(
+                  appLocalizations.passwordLength,
+                  isError: true,
+                );
+                return;
+              }
+              if (newPassword != confirmNewPassword) {
+                _showSnackBar(
+                  appLocalizations.passwordMismatch,
+                  isError: true,
+                );
+                return;
+              }
+              if (currentPassword == null ||
+                  currentPassword!.isEmpty) {
+                _showSnackBar(
+                  appLocalizations
+                      .enterCurrentPassword, // Corrected to use translated string
+                  isError: true,
+                );
+                return;
+              }
+
+              if (mounted) {
+                setState(() {
+                  _isLoading = true;
+                });
+              }
+              try {
+                User? user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                  AuthCredential credential =
+                      EmailAuthProvider.credential(
+                    email: user.email!,
+                    password: currentPassword!,
+                  );
+                  await user.reauthenticateWithCredential(
+                    credential,
+                  );
+                  await user.updatePassword(newPassword!);
+                  _showSnackBar(
+                    appLocalizations.passwordChangeSuccess,
+                  );
+                  if (mounted) {
+                    Navigator.of(ctx).pop();
+                  }
+                }
+              } on FirebaseAuthException catch (e) {
+                String errorMessage =
+                    appLocalizations.passwordChangeFailed;
+                if (e.code == 'wrong-password') {
+                  errorMessage =
+                      appLocalizations.wrongCurrentPassword;
+                } else if (e.code == 'requires-recent-login') {
+                  errorMessage =
+                      appLocalizations.reauthenticateRequired;
+                }
+                _showSnackBar(errorMessage, isError: true);
+              } catch (e) {
+                _showSnackBar(
+                  '${appLocalizations.errorOccurred}${e.toString().replaceFirst('Exception: ', '')}',
+                  isError: true,
+                );
+              } finally {
+                if (mounted) {
+                  setState(() {
+                    _isLoading = false;
+                  });
+                }
+              }
+            },
+            child: Text(appLocalizations.changePassword),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
+    final appLocalizations = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('إعدادات الحساب')),
-      body:
-          userProvider.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundColor: Theme.of(
+      appBar:
+          AppBar(title: Text(appLocalizations.settingsTitle)),
+      body: userProvider.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).primaryColor.withOpacity(0.1),
+                        child: Icon(
+                          Icons.person,
+                          size: 60,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    TextFormField(
+                      controller: TextEditingController(
+                        text: userProvider.currentUser?.email ??
+                            appLocalizations.notAvailable,
+                      ),
+                      readOnly: true,
+                      decoration: InputDecoration(
+                        labelText: appLocalizations.email,
+                        prefixIcon: const Icon(Icons.email),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        labelText: appLocalizations.name,
+                        prefixIcon: const Icon(Icons.person),
+                      ),
+                      validator: (value) {
+                        if (value == null ||
+                            value.trim().isEmpty) {
+                          return appLocalizations.enterYourName;
+                        }
+                        return null;
+                      },
+                      onSaved: (value) =>
+                          _nameController.text = value!,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _addressController,
+                      decoration: InputDecoration(
+                        labelText: appLocalizations.address,
+                        prefixIcon:
+                            const Icon(Icons.location_on),
+                      ),
+                      onSaved: (value) =>
+                          _addressController.text = value!,
+                    ),
+                    const SizedBox(height: 30),
+                    Center(
+                      child: _isLoading
+                          ? const CircularProgressIndicator()
+                          : ElevatedButton(
+                              onPressed: _updateUserData,
+                              child: Text(
+                                appLocalizations.saveChanges,
+                              ),
+                            ),
+                    ),
+                    const SizedBox(height: 20),
+                    Center(
+                      child: TextButton(
+                        onPressed: _changePassword,
+                        child: Text(
+                          appLocalizations.changePassword,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Center(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          await _authService.signOut();
+                          userProvider.clearUser();
+                          Provider.of<CartProvider>(
                             context,
-                          ).primaryColor.withOpacity(0.1),
-                          child: Icon(
-                            Icons.person,
-                            size: 60,
-                            color:
-                                Theme.of(context).primaryColor,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                      TextFormField(
-                        controller: TextEditingController(
-                          text:
-                              userProvider.currentUser?.email ??
-                              'غير متوفر',
-                        ),
-                        readOnly: true,
-                        decoration: const InputDecoration(
-                          labelText: 'البريد الإلكتروني',
-                          prefixIcon: Icon(Icons.email),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'الاسم',
-                          prefixIcon: Icon(Icons.person),
-                        ),
-                        validator: (value) {
-                          if (value == null ||
-                              value.trim().isEmpty) {
-                            return 'الرجاء إدخال اسمك.';
-                          }
-                          return null;
-                        },
-                        onSaved:
-                            (value) =>
-                                _nameController.text = value!,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _addressController,
-                        decoration: const InputDecoration(
-                          labelText: 'العنوان',
-                          prefixIcon: Icon(Icons.location_on),
-                        ),
-                        onSaved:
-                            (value) =>
-                                _addressController.text = value!,
-                      ),
-                      const SizedBox(height: 30),
-                      Center(
-                        child:
-                            _isLoading
-                                ? const CircularProgressIndicator()
-                                : ElevatedButton(
-                                  onPressed: _updateUserData,
-                                  child: const Text(
-                                    'حفظ التغييرات',
-                                  ),
-                                ),
-                      ),
-                      const SizedBox(height: 20),
-                      Center(
-                        child: TextButton(
-                          onPressed: _changePassword,
-                          child: const Text(
-                            'تغيير كلمة المرور',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Center(
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            await _authService.signOut();
-                            userProvider.clearUser();
-                            Provider.of<CartProvider>(
-                              context,
-                              listen: false,
-                            ).clearCart();
+                            listen: false,
+                          ).clearCart();
+                          if (mounted) {
                             Navigator.of(
                               context,
                             ).pushAndRemoveUntil(
                               MaterialPageRoute(
-                                builder:
-                                    (ctx) => const AuthScreen(),
+                                builder: (ctx) =>
+                                    const AuthScreen(),
                               ),
                               (Route<dynamic> route) => false,
                             );
-                          },
-                          icon: const Icon(Icons.logout),
-                          label: const Text('تسجيل الخروج'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                          ),
+                          }
+                        },
+                        icon: const Icon(Icons.logout),
+                        label: Text(appLocalizations.logout),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
+            ),
     );
   }
 }
@@ -1991,6 +2340,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final StorageService _storageService = StorageService();
 
   void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -2001,45 +2351,53 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 
   Future<void> _deleteProduct(Product product) async {
-    bool confirm =
-        await showDialog(
+    final appLocalizations = AppLocalizations.of(context)!;
+    bool confirm = await showDialog(
           context: context,
-          builder:
-              (ctx) => AlertDialog(
-                title: const Text('تأكيد الحذف'),
-                content: Text(
-                  'هل أنت متأكد أنك تريد حذف المنتج "${product.name}"؟',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed:
-                        () => Navigator.of(ctx).pop(false),
-                    child: const Text('إلغاء'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(ctx).pop(true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                    ),
-                    child: const Text('حذف'),
-                  ),
-                ],
+          builder: (ctx) => AlertDialog(
+            title: Text(appLocalizations.confirmDelete),
+            content: Text(
+              appLocalizations
+                  .confirmDeleteProduct(product.name),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  if (mounted) {
+                    Navigator.of(ctx).pop(false);
+                  }
+                },
+                child: Text(appLocalizations.cancel),
               ),
+              ElevatedButton(
+                onPressed: () {
+                  if (mounted) {
+                    Navigator.of(ctx).pop(true);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                ),
+                child: Text(appLocalizations.delete),
+              ),
+            ],
+          ),
         ) ??
         false;
 
     if (confirm) {
       try {
         if (product.imageUrl.isNotEmpty) {
+          // استدعاء خدمة حذف الصورة من Cloudinary (ملاحظة: هذا يتطلب خادمًا خلفيًا للأمان)
           await _storageService.deleteProductImage(
             product.imageUrl,
           );
         }
         await _firestoreService.deleteProduct(product.id);
-        _showSnackBar('تم حذف المنتج بنجاح!');
+        _showSnackBar(appLocalizations.productDeleted);
       } catch (e) {
         _showSnackBar(
-          'فشل حذف المنتج: ${e.toString().replaceFirst('Exception: ', '')}',
+          '${appLocalizations.deleteFailed}${e.toString().replaceFirst('Exception: ', '')}',
           isError: true,
         );
       }
@@ -2048,9 +2406,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appLocalizations = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('لوحة تحكم الأدمن'),
+        title: Text(appLocalizations.adminPanelTitle),
         centerTitle: true,
       ),
       body: StreamBuilder<List<Product>>(
@@ -2065,15 +2424,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           if (snapshot.hasError) {
             return Center(
               child: Text(
-                'خطأ في تحميل المنتجات: ${snapshot.error}',
+                '${appLocalizations.loadingProductsError}${snapshot.error}',
               ),
             );
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                'لا توجد منتجات حالياً. اضغط على زر الإضافة لإضافة منتج جديد.',
-                style: TextStyle(
+                appLocalizations.noProducts,
+                style: const TextStyle(
                   fontSize: 18,
                   color: Colors.black54,
                 ),
@@ -2129,7 +2488,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     ),
                   ),
                   subtitle: Text(
-                    '${product.price.toStringAsFixed(2)} ر.س - رقم: ${product.productNumber}',
+                    '${product.price.toStringAsFixed(2)} ${appLocalizations.currencySymbol} - ${appLocalizations.productNumberShort}: ${product.productNumber}',
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -2140,14 +2499,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           color: Colors.blue,
                         ),
                         onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder:
-                                  (ctx) => ManageProductScreen(
-                                    product: product,
-                                  ),
-                            ),
-                          );
+                          if (mounted) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (ctx) =>
+                                    ManageProductScreen(
+                                  product: product,
+                                ),
+                              ),
+                            );
+                          }
                         },
                       ),
                       IconButton(
@@ -2167,11 +2528,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (ctx) => const ManageProductScreen(),
-            ),
-          );
+          if (mounted) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (ctx) => const ManageProductScreen(),
+              ),
+            );
+          }
         },
         child: const Icon(Icons.add),
       ),
@@ -2233,6 +2596,7 @@ class _ManageProductScreenState
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -2243,20 +2607,26 @@ class _ManageProductScreenState
   }
 
   Future<void> _pickImage() async {
+    final appLocalizations = AppLocalizations.of(context)!;
     final pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 50,
     );
-    setState(() {
-      if (pickedFile != null) {
-        _pickedImage = File(pickedFile.path);
-      } else {
-        print('لم يتم اختيار صورة.');
-      }
-    });
+    if (mounted) {
+      // Check mounted after async operation
+      setState(() {
+        if (pickedFile != null) {
+          _pickedImage = File(pickedFile.path);
+        } else {
+          // For production, consider using a logging framework instead of print
+          print(appLocalizations.imageNotSelected);
+        }
+      });
+    }
   }
 
   Future<void> _submitProduct() async {
+    final appLocalizations = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -2265,31 +2635,31 @@ class _ManageProductScreenState
     if (_pickedImage == null &&
         (_currentImageUrl == null ||
             _currentImageUrl!.isEmpty)) {
-      _showSnackBar('الرجاء اختيار صورة للمنتج.', isError: true);
+      _showSnackBar(appLocalizations.selectImage, isError: true);
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
       String? imageUrlToSave = _currentImageUrl;
 
       if (_pickedImage != null) {
-        if (_currentImageUrl != null &&
-            _currentImageUrl!.isNotEmpty) {
-          await _storageService.deleteProductImage(
-            _currentImageUrl!,
-          );
+        if (widget.product != null &&
+            widget.product!.imageUrl.isNotEmpty) {
+          // For production, consider using a logging framework instead of print
+          print(appLocalizations.skippingOldImageDeletion);
         }
-        imageUrlToSave = await _storageService
-            .uploadProductImage(
-              _pickedImage!,
-              widget.product?.id ??
-                  DateTime.now().millisecondsSinceEpoch
-                      .toString(),
-            );
+        imageUrlToSave =
+            await _storageService.uploadProductImage(
+          _pickedImage!,
+          widget.product?.id ??
+              DateTime.now().millisecondsSinceEpoch.toString(),
+        );
       }
 
       final newProduct = Product(
@@ -2303,34 +2673,41 @@ class _ManageProductScreenState
 
       if (widget.product == null) {
         await _firestoreService.addProduct(newProduct);
-        _showSnackBar('تم إضافة المنتج بنجاح!');
+        _showSnackBar(appLocalizations.productAdded);
       } else {
         await _firestoreService.updateProduct(
           widget.product!.id,
           newProduct.toFirestore(),
         );
-        _showSnackBar('تم تعديل المنتج بنجاح!');
+        _showSnackBar(appLocalizations.productUpdated);
       }
-      Navigator.of(context).pop();
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       _showSnackBar(
-        'فشل العملية: ${e.toString().replaceFirst('Exception: ', '')}',
+        '${appLocalizations.operationFailed}${e.toString().replaceFirst('Exception: ', '')}',
         isError: true,
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.product != null;
+    final appLocalizations = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          isEditing ? 'تعديل المنتج' : 'إضافة منتج جديد',
+          isEditing
+              ? appLocalizations.editProduct
+              : appLocalizations.newProduct,
         ),
         centerTitle: true,
       ),
@@ -2347,37 +2724,35 @@ class _ManageProductScreenState
                   child: CircleAvatar(
                     radius: 80,
                     backgroundColor: Colors.grey[200],
-                    backgroundImage:
-                        _pickedImage != null
-                            ? FileImage(_pickedImage!)
-                            : (_currentImageUrl != null &&
-                                    _currentImageUrl!.isNotEmpty
-                                ? NetworkImage(_currentImageUrl!)
-                                    as ImageProvider
-                                : null),
-                    child:
-                        (_pickedImage == null &&
-                                (_currentImageUrl == null ||
-                                    _currentImageUrl!.isEmpty))
-                            ? Icon(
-                              Icons.camera_alt,
-                              size: 50,
-                              color: Colors.grey[600],
-                            )
-                            : null,
+                    backgroundImage: _pickedImage != null
+                        ? FileImage(_pickedImage!)
+                        : (_currentImageUrl != null &&
+                                _currentImageUrl!.isNotEmpty
+                            ? NetworkImage(_currentImageUrl!)
+                                as ImageProvider
+                            : null),
+                    child: (_pickedImage == null &&
+                            (_currentImageUrl == null ||
+                                _currentImageUrl!.isEmpty))
+                        ? Icon(
+                            Icons.camera_alt,
+                            size: 50,
+                            color: Colors.grey[600],
+                          )
+                        : null,
                   ),
                 ),
               ),
               const SizedBox(height: 20),
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'اسم المنتج',
-                  prefixIcon: Icon(Icons.text_fields),
+                decoration: InputDecoration(
+                  labelText: appLocalizations.productName,
+                  prefixIcon: const Icon(Icons.text_fields),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'الرجاء إدخال اسم المنتج.';
+                    return appLocalizations.enterProductName;
                   }
                   return null;
                 },
@@ -2385,13 +2760,13 @@ class _ManageProductScreenState
               const SizedBox(height: 16),
               TextFormField(
                 controller: _productNumberController,
-                decoration: const InputDecoration(
-                  labelText: 'رقم المنتج (فريد للواتساب)',
-                  prefixIcon: Icon(Icons.numbers),
+                decoration: InputDecoration(
+                  labelText: appLocalizations.productNumber,
+                  prefixIcon: const Icon(Icons.numbers),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'الرجاء إدخال رقم المنتج.';
+                    return appLocalizations.enterProductNumber;
                   }
                   return null;
                 },
@@ -2400,15 +2775,15 @@ class _ManageProductScreenState
               TextFormField(
                 controller: _priceController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'السعر (ر.س)',
-                  prefixIcon: Icon(Icons.attach_money),
+                decoration: InputDecoration(
+                  labelText: appLocalizations.priceSAR,
+                  prefixIcon: const Icon(Icons.attach_money),
                 ),
                 validator: (value) {
                   if (value == null ||
                       value.trim().isEmpty ||
                       double.tryParse(value) == null) {
-                    return 'الرجاء إدخال سعر صالح.';
+                    return appLocalizations.enterValidPrice;
                   }
                   return null;
                 },
@@ -2417,40 +2792,40 @@ class _ManageProductScreenState
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'الوصف',
+                decoration: InputDecoration(
+                  labelText: appLocalizations.description,
                   alignLabelWithHint: true,
-                  prefixIcon: Icon(Icons.description),
+                  prefixIcon: const Icon(Icons.description),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'الرجاء إدخال وصف للمنتج.';
+                    return appLocalizations
+                        .enterProductDescription;
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 30),
               Center(
-                child:
-                    _isLoading
-                        ? const CircularProgressIndicator()
-                        : ElevatedButton.icon(
-                          onPressed: _submitProduct,
-                          icon: Icon(
-                            isEditing ? Icons.save : Icons.add,
-                          ),
-                          label: Text(
-                            isEditing
-                                ? 'حفظ التغييرات'
-                                : 'إضافة المنتج',
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 40,
-                              vertical: 15,
-                            ),
+                child: _isLoading
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton.icon(
+                        onPressed: _submitProduct,
+                        icon: Icon(
+                          isEditing ? Icons.save : Icons.add,
+                        ),
+                        label: Text(
+                          isEditing
+                              ? appLocalizations.saveChanges
+                              : appLocalizations.newProduct,
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 15,
                           ),
                         ),
+                      ),
               ),
             ],
           ),
