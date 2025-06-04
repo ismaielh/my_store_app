@@ -665,7 +665,7 @@ abstract class AppLocalizations {
   /// No description provided for @currencySymbol.
   ///
   /// In en, this message translates to:
-  /// **'SAR'**
+  /// **'SYP'**
   String get currencySymbol;
 
   /// No description provided for @whatsappOrderStart.
@@ -745,6 +745,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enter your current password.'**
   String get enterCurrentPassword;
+
+  /// No description provided for @customerName.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Name'**
+  String get customerName;
+
+  /// No description provided for @customerAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Address'**
+  String get customerAddress;
+
+  /// No description provided for @productNumberExists.
+  ///
+  /// In en, this message translates to:
+  /// **'Product number already exists. Please enter a unique number.'**
+  String get productNumberExists;
+
+  /// No description provided for @priceUSD.
+  ///
+  /// In en, this message translates to:
+  /// **'Price (USD)'**
+  String get priceUSD;
+
+  /// No description provided for @dollarExchangeRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Dollar Exchange Rate (SYP)'**
+  String get dollarExchangeRate;
+
+  /// No description provided for @enterDollarExchangeRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the dollar exchange rate.'**
+  String get enterDollarExchangeRate;
+
+  /// No description provided for @syrianPound.
+  ///
+  /// In en, this message translates to:
+  /// **'SYP'**
+  String get syrianPound;
+
+  /// No description provided for @dollarExchangeRateUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Dollar exchange rate updated successfully!'**
+  String get dollarExchangeRateUpdated;
+
+  /// No description provided for @productNameAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Product Name (Arabic)'**
+  String get productNameAr;
+
+  /// No description provided for @productNameEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Product Name (English)'**
+  String get productNameEn;
+
+  /// No description provided for @productDescriptionAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Product Description (Arabic)'**
+  String get productDescriptionAr;
+
+  /// No description provided for @productDescriptionEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Product Description (English)'**
+  String get productDescriptionEn;
+
+  /// No description provided for @enterProductNameAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter product name in Arabic.'**
+  String get enterProductNameAr;
+
+  /// No description provided for @enterProductNameEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter product name in English.'**
+  String get enterProductNameEn;
+
+  /// No description provided for @enterProductDescriptionAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter product description in Arabic.'**
+  String get enterProductDescriptionAr;
+
+  /// No description provided for @enterProductDescriptionEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter product description in English.'**
+  String get enterProductDescriptionEn;
 }
 
 class _AppLocalizationsDelegate

@@ -1,26 +1,32 @@
-import 'dart:io'; // Required for File operations (image_picker)
+import 'dart:io'; // مطلوب لعمليات الملفات (مثل اختيار الصور)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_storage/firebase_storage.dart'; // قم بالتعليق على هذا السطر أو حذفه
 import 'package:my_store_app/firebase_options.dart';
 import 'package:my_store_app/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:cloudinary_public/cloudinary_public.dart'; // استيراد حزمة Cloudinary
+import 'package:cloudinary_public/cloudinary_public.dart'; // استيراد حزمة Cloudinary لرفع الصور
 
+/// نقطة الدخول الرئيسية للتطبيق.
+/// تقوم بتهيئة Firebase وتشغيل التطبيق.
 void main() async {
+  // التأكد من تهيئة Widgets قبل تشغيل التطبيق
   WidgetsFlutterBinding.ensureInitialized();
+  // تهيئة Firebase باستخدام الخيارات الافتراضية للمنصة الحالية
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // تشغيل التطبيق
   runApp(const MyApp());
 }
 
+/// الـ Widget الرئيسي للتطبيق.
+/// يقوم بإعداد المزودات (Providers) وإدارة حالة المصادقة لعرض الشاشة المناسبة.
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -28,32 +34,44 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        // مزود لإدارة سلة التسوق
         ChangeNotifierProvider(create: (ctx) => CartProvider()),
+        // مزود لإدارة بيانات المستخدم وحالته (أدمن أم لا)
         ChangeNotifierProvider(create: (ctx) => UserProvider()),
+        // مزود لإدارة لغة التطبيق
         ChangeNotifierProvider(
-            create: (ctx) =>
-                LocaleProvider()), // إضافة LocaleProvider
+            create: (ctx) => LocaleProvider()),
+        // مزود لإدارة سعر صرف الدولار
+        ChangeNotifierProvider(
+            create: (ctx) => ExchangeRateProvider()),
       ],
+      // Consumer للاستماع إلى تغييرات اللغة وتحديث التطبيق بناءً عليها
       child: Consumer<LocaleProvider>(
-        // استخدام Consumer للاستماع لتغييرات اللغة
         builder: (context, localeProvider, child) {
           return MaterialApp(
-            // استخدام الترجمة لعنوان التطبيق
+            debugShowCheckedModeBanner: false,
+            // توليد عنوان التطبيق بناءً على اللغة المختارة
             onGenerateTitle: (context) =>
                 AppLocalizations.of(context)!.appName,
+            // تحديد مندوبي الترجمة المدعومين
             localizationsDelegates: const [
               AppLocalizations
-                  .delegate, // إضافة delegate الخاص بالترجمة
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
+                  .delegate, // مندوب الترجمة الخاص بنا
+              GlobalMaterialLocalizations
+                  .delegate, // مندوب ترجمة مكونات Material Design
+              GlobalWidgetsLocalizations
+                  .delegate, // مندوب ترجمة Widgets
+              GlobalCupertinoLocalizations
+                  .delegate, // مندوب ترجمة مكونات Cupertino
             ],
+            // اللغات المدعومة في التطبيق
             supportedLocales: const [
               Locale('ar', ''), // دعم اللغة العربية
               Locale('en', ''), // دعم اللغة الإنجليزية
             ],
-            locale: localeProvider
-                .locale, // تحديد اللغة بناءً على LocaleProvider
+            // تحديد اللغة الحالية للتطبيق بناءً على LocaleProvider
+            locale: localeProvider.locale,
+            // دالة لحل اللغة إذا لم تكن اللغة المفضلة للمستخدم مدعومة
             localeResolutionCallback:
                 (locale, supportedLocales) {
               for (var supportedLocale in supportedLocales) {
@@ -62,31 +80,54 @@ class MyApp extends StatelessWidget {
                   return supportedLocale;
                 }
               }
-              return supportedLocales.first;
+              return supportedLocales
+                  .first; // العودة إلى أول لغة مدعومة (العربية في هذه الحالة)
             },
+            // تعريف سمات التصميم العامة للتطبيق
             theme: ThemeData(
-              primarySwatch: Colors.blueGrey,
+              primarySwatch: Colors.blueGrey, // اللون الأساسي
               colorScheme: ColorScheme.fromSwatch(
                 primarySwatch: Colors.blueGrey,
                 accentColor: Colors.deepOrangeAccent,
-              ).copyWith(secondary: Colors.deepOrangeAccent),
-              // fontFamily: 'Cairo', // يمكنك تفعيل هذا الخط إذا كان لديك ملف الخط
-              appBarTheme: const AppBarTheme(
+              ).copyWith(
+                  secondary:
+                      Colors.deepOrangeAccent), // اللون الثانوي
+              // fontFamily: 'Cairo', // يمكنك تفعيل هذا الخط إذا كان لديك ملف الخط (يتطلب إضافة الخط إلى pubspec.yaml)
+              // تحسينات تصميم شريط التطبيق (AppBar)
+              appBarTheme: AppBarTheme(
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black87,
-                elevation: 0.5,
-                titleTextStyle: TextStyle(
+                elevation: 4.0, // زيادة الظل لإعطاء عمق
+                shadowColor:
+                    Colors.grey.withOpacity(0.3), // لون الظل
+                titleTextStyle: const TextStyle(
                   color: Colors.black87,
-                  fontSize: 20,
+                  fontSize: 22, // حجم أكبر للعنوان
                   fontWeight: FontWeight.bold,
                 ),
+                iconTheme: const IconThemeData(
+                    color: Colors
+                        .black87), // لون أيقونات الـ AppBar
+                actionsIconTheme: const IconThemeData(
+                    color: Colors
+                        .black87), // لون أيقونات الإجراءات في الـ AppBar
+                shape: const RoundedRectangleBorder(
+                  // حواف سفلية مستديرة
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(20),
+                  ),
+                ),
               ),
+              // تحسينات تصميم الأزرار المرتفعة (ElevatedButton)
               elevatedButtonTheme: ElevatedButtonThemeData(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrangeAccent,
-                  foregroundColor: Colors.white,
+                  backgroundColor:
+                      Colors.deepOrangeAccent, // لون الخلفية
+                  foregroundColor:
+                      Colors.white, // لون النص والأيقونات
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(
+                        12), // حواف مستديرة أكثر
                   ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 30,
@@ -96,16 +137,19 @@ class MyApp extends StatelessWidget {
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
+                  elevation: 3, // إضافة ظل للأزرار
                 ),
               ),
               inputDecorationTheme: InputDecorationTheme(
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(
+                      12), // حواف مستديرة أكثر
                   borderSide:
                       const BorderSide(color: Colors.grey),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(
+                      12), // حواف مستديرة أكثر
                   borderSide: const BorderSide(
                     color: Colors.blueGrey,
                     width: 2,
@@ -119,38 +163,49 @@ class MyApp extends StatelessWidget {
                 filled: true,
               ),
               cardTheme: CardThemeData(
-                elevation: 2,
+                elevation: 5, // ظل أكبر للبطاقات
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(
+                      15), // حواف مستديرة أكثر
                 ),
+                shadowColor: Colors.black
+                    .withOpacity(0.1), // لون ظل البطاقات
               ),
             ),
+            // إدارة حالة المصادقة لعرض الشاشة الأولية (تسجيل الدخول/الرئيسية)
             home: StreamBuilder<User?>(
-              stream: FirebaseAuth.instance.authStateChanges(),
+              stream: FirebaseAuth.instance
+                  .authStateChanges(), // الاستماع لتغييرات حالة المصادقة
               builder: (context, snapshot) {
+                // إذا كانت حالة الاتصال تنتظر، اعرض مؤشر التحميل
                 if (snapshot.connectionState ==
                     ConnectionState.waiting) {
                   return const Center(
                     child: CircularProgressIndicator(),
                   );
                 }
+                // إذا كان المستخدم مسجلاً الدخول
                 if (snapshot.hasData) {
+                  // جلب بيانات المستخدم بعد تسجيل الدخول
                   return FutureBuilder(
                     future: Provider.of<UserProvider>(
                       context,
                       listen: false,
                     ).fetchUserData(snapshot.data!.uid),
                     builder: (context, userSnapshot) {
+                      // إذا كانت حالة الاتصال تنتظر، اعرض مؤشر التحميل
                       if (userSnapshot.connectionState ==
                           ConnectionState.waiting) {
                         return const Center(
                           child: CircularProgressIndicator(),
                         );
                       }
+                      // بعد جلب بيانات المستخدم، اعرض الشاشة الرئيسية
                       return const HomeScreen();
                     },
                   );
                 }
+                // إذا لم يكن المستخدم مسجلاً الدخول، اعرض شاشة المصادقة
                 return const AuthScreen();
               },
             ),
@@ -162,15 +217,19 @@ class MyApp extends StatelessWidget {
 }
 
 // =============================================================================
-// MODELS
+// MODELS (نماذج البيانات)
 // =============================================================================
 
+/// يمثل نموذج بيانات المنتج.
 class Product {
   final String id;
-  final String name;
+  final Map<String, String>
+      name; // الاسم الآن كـ Map للغات (مثال: {'ar': 'قميص', 'en': 'Shirt'})
   final String productNumber;
-  final String description;
-  final double price;
+  final Map<String, String>
+      description; // الوصف الآن كـ Map للغات
+  final double
+      price; // السعر هنا بالدولار الأمريكي (يتم تحويله إلى الليرة السورية للعرض)
   final String imageUrl;
 
   Product({
@@ -182,39 +241,96 @@ class Product {
     required this.imageUrl,
   });
 
+  /// دالة مساعدة للحصول على اسم المنتج باللغة الحالية للتطبيق.
+  /// إذا لم تكن الترجمة متاحة للغة الحالية، تحاول العودة إلى العربية ثم الإنجليزية.
+  String getLocalizedName(BuildContext context) {
+    final String languageCode =
+        Localizations.localeOf(context).languageCode;
+    return name[languageCode] ??
+        name['ar'] ??
+        name['en'] ??
+        'No Name';
+  }
+
+  /// دالة مساعدة للحصول على وصف المنتج باللغة الحالية للتطبيق.
+  /// إذا لم تكن الترجمة متاحة للغة الحالية، تحاول العودة إلى العربية ثم الإنجليزية.
+  String getLocalizedDescription(BuildContext context) {
+    final String languageCode =
+        Localizations.localeOf(context).languageCode;
+    return description[languageCode] ??
+        description['ar'] ??
+        description['en'] ??
+        'No Description';
+  }
+
+  /// دالة مصنع (factory) لإنشاء كائن Product من DocumentSnapshot من Firestore.
+  /// تتعامل مع الحقول التي قد تكون String أو Map (للتوافق مع البيانات القديمة).
   factory Product.fromFirestore(DocumentSnapshot doc) {
     Map data = doc.data() as Map<String, dynamic>;
+
+    // التعامل مع حقل 'name' سواء كان String (بيانات قديمة) أو Map (بيانات جديدة)
+    Map<String, String> nameMap;
+    if (data['name'] is String) {
+      // إذا كان String، افترض أنه عربي وكرره للإنجليزي كقيمة مبدئية
+      nameMap = {'ar': data['name'], 'en': data['name']};
+    } else if (data['name'] is Map) {
+      // إذا كان Map، قم بتحويله إلى Map<String, String>
+      nameMap = Map<String, String>.from(data['name']);
+    } else {
+      // قيمة افتراضية إذا كان الحقل غير موجود أو بنوع غير متوقع
+      nameMap = {'ar': '', 'en': ''};
+    }
+
+    // التعامل مع حقل 'description' سواء كان String أو Map بنفس الطريقة
+    Map<String, String> descriptionMap;
+    if (data['description'] is String) {
+      descriptionMap = {
+        'ar': data['description'],
+        'en': data['description']
+      };
+    } else if (data['description'] is Map) {
+      descriptionMap =
+          Map<String, String>.from(data['description']);
+    } else {
+      descriptionMap = {'ar': '', 'en': ''};
+    }
+
     return Product(
       id: doc.id,
-      name: data['name'] ?? '',
+      name: nameMap,
       productNumber: data['productNumber'] ?? '',
-      description: data['description'] ?? '',
+      description: descriptionMap,
       price: (data['price'] ?? 0.0).toDouble(),
       imageUrl: data['imageUrl'] ?? '',
     );
   }
 
+  /// تحويل كائن Product إلى Map ليتم حفظه في Firestore.
   Map<String, dynamic> toFirestore() {
     return {
-      'name': name,
+      'name': name, // حفظ الاسم كـ Map
       'productNumber': productNumber,
-      'description': description,
-      'price': price,
+      'description': description, // حفظ الوصف كـ Map
+      'price': price, // حفظ السعر بالدولار
       'imageUrl': imageUrl,
-      'timestamp': FieldValue.serverTimestamp(),
+      'timestamp': FieldValue
+          .serverTimestamp(), // إضافة طابع زمني لترتيب المنتجات
     };
   }
 }
 
+/// يمثل عنصرًا واحدًا في سلة التسوق.
 class CartItem {
   final Product product;
   int quantity;
 
   CartItem({required this.product, this.quantity = 1});
 
-  double get totalPrice => product.price * quantity;
+  /// يحسب السعر الإجمالي للعنصر (السعر بالدولار * الكمية).
+  double get totalPriceUSD => product.price * quantity;
 }
 
+/// يمثل نموذج بيانات المستخدم.
 class UserModel {
   final String uid;
   final String email;
@@ -230,6 +346,7 @@ class UserModel {
     this.isAdmin = false,
   });
 
+  /// دالة مصنع (factory) لإنشاء كائن UserModel من DocumentSnapshot من Firestore.
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     Map data = doc.data() as Map<String, dynamic>;
     return UserModel(
@@ -241,6 +358,7 @@ class UserModel {
     );
   }
 
+  /// تحويل كائن UserModel إلى Map ليتم حفظه في Firestore.
   Map<String, dynamic> toFirestore() {
     return {
       'email': email,
@@ -251,7 +369,9 @@ class UserModel {
   }
 }
 
+/// امتداد لـ UserModel لإضافة دالة copyWith.
 extension on UserModel {
+  /// ينشئ نسخة جديدة من UserModel مع إمكانية تغيير الاسم والعنوان.
   UserModel copyWith({String? name, String? address}) {
     return UserModel(
       uid: uid,
@@ -264,31 +384,84 @@ extension on UserModel {
 }
 
 // =============================================================================
-// PROVIDERS (State Management)
+// PROVIDERS (إدارة الحالة)
 // =============================================================================
 
+/// مزود لإدارة لغة التطبيق.
 class LocaleProvider with ChangeNotifier {
   Locale? _locale;
 
   Locale? get locale => _locale;
 
+  /// تعيين اللغة الجديدة للتطبيق.
   void setLocale(Locale locale) {
     if (_locale == locale) return;
     _locale = locale;
-    notifyListeners();
+    notifyListeners(); // إعلام المستمعين بالتغيير
   }
 
+  /// مسح اللغة المحددة (العودة إلى الافتراضي).
   void clearLocale() {
     _locale = null;
     notifyListeners();
   }
 }
 
+/// مزود لإدارة سعر صرف الدولار.
+class ExchangeRateProvider with ChangeNotifier {
+  double _dollarExchangeRate = 0.0;
+  bool _isLoading = false;
+  final FirestoreService _firestoreService = FirestoreService();
+
+  double get dollarExchangeRate => _dollarExchangeRate;
+  bool get isLoading => _isLoading;
+
+  /// عند تهيئة المزود، يقوم بجلب سعر الصرف.
+  ExchangeRateProvider() {
+    _fetchExchangeRate();
+  }
+
+  /// جلب سعر الصرف من Firestore.
+  Future<void> _fetchExchangeRate() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _dollarExchangeRate =
+          await _firestoreService.getDollarExchangeRate();
+    } catch (e) {
+      // For production, consider using a logging framework instead of print
+      print('Error fetching dollar exchange rate: $e');
+      _dollarExchangeRate = 0.0; // قيمة افتراضية في حالة الخطأ
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// تحديث سعر صرف الدولار في Firestore وإعلام المستمعين.
+  Future<void> updateDollarExchangeRate(double newRate) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _firestoreService.updateDollarExchangeRate(newRate);
+      _dollarExchangeRate = newRate;
+    } catch (e) {
+      // For production, consider using a logging framework instead of print
+      print('Error updating dollar exchange rate: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+}
+
+/// مزود لإدارة سلة التسوق.
 class CartProvider with ChangeNotifier {
   final List<CartItem> _items = [];
 
   List<CartItem> get items => [..._items];
 
+  /// يحسب العدد الإجمالي للعناصر في السلة.
   int get itemCount {
     return _items.fold(
       0,
@@ -296,13 +469,16 @@ class CartProvider with ChangeNotifier {
     );
   }
 
-  double get totalAmount {
+  /// يحسب السعر الإجمالي لسلة التسوق بالليرة السورية بناءً على سعر صرف الدولار.
+  double totalAmountSYP(double dollarExchangeRate) {
     return _items.fold(
       0.0,
-      (total, current) => total + current.totalPrice,
+      (total, current) =>
+          total + (current.totalPriceUSD * dollarExchangeRate),
     );
   }
 
+  /// إضافة منتج إلى سلة التسوق أو زيادة كميته إذا كان موجوداً.
   void addItem(Product product, {int quantity = 1}) {
     final existingIndex = _items.indexWhere(
       (item) => item.product.id == product.id,
@@ -316,11 +492,13 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// إزالة منتج من سلة التسوق.
   void removeItem(String productId) {
     _items.removeWhere((item) => item.product.id == productId);
     notifyListeners();
   }
 
+  /// زيادة كمية منتج معين في سلة التسوق.
   void increaseQuantity(String productId) {
     final index = _items.indexWhere(
       (item) => item.product.id == productId,
@@ -331,6 +509,7 @@ class CartProvider with ChangeNotifier {
     }
   }
 
+  /// تقليل كمية منتج معين في سلة التسوق، وإزالته إذا وصلت الكمية إلى صفر.
   void decreaseQuantity(String productId) {
     final index = _items.indexWhere(
       (item) => item.product.id == productId,
@@ -345,30 +524,50 @@ class CartProvider with ChangeNotifier {
     }
   }
 
+  /// مسح جميع العناصر من سلة التسوق.
   void clearCart() {
     _items.clear();
     notifyListeners();
   }
 
-  String getWhatsAppMessage(BuildContext context) {
+  /// توليد رسالة واتساب تحتوي على تفاصيل الطلب وبيانات العميل.
+  String getWhatsAppMessage(BuildContext context,
+      UserModel? user, double dollarExchangeRate) {
     final appLocalizations = AppLocalizations.of(context)!;
-    if (_items.isEmpty) {
-      return appLocalizations.whatsappInquiryMessage;
+    String message = '';
+
+    // إضافة اسم العميل وعنوانه إذا كانا متاحين
+    if (user != null) {
+      message +=
+          '${appLocalizations.customerName}: ${user.name}\n';
+      message +=
+          '${appLocalizations.customerAddress}: ${user.address}\n\n';
     }
 
-    String message = appLocalizations.whatsappOrderStart;
-    for (var i = 0; i < _items.length; i++) {
-      final item = _items[i];
+    // إذا كانت السلة فارغة، أرسل رسالة استفسار عامة
+    if (_items.isEmpty) {
+      message += appLocalizations.whatsappInquiryMessage;
+    } else {
+      // بناء رسالة الطلب
+      message += appLocalizations.whatsappOrderStart;
+      for (var i = 0; i < _items.length; i++) {
+        final item = _items[i];
+        // عرض اسم المنتج المترجم، رقم المنتج، الكمية، والسعر بالدولار والليرة السورية
+        message +=
+            '${i + 1}. ${item.product.getLocalizedName(context)} (${appLocalizations.productNumberShort}: ${item.product.productNumber}) - ${appLocalizations.quantity}: ${item.quantity}\n';
+        message +=
+            '  ${appLocalizations.priceUSD}: ${item.product.price.toStringAsFixed(2)} \$ (${(item.product.price * dollarExchangeRate).toStringAsFixed(2)} ${appLocalizations.currencySymbol})\n';
+      }
+      // إضافة الإجمالي الكلي للطلب بالليرة السورية
       message +=
-          '${i + 1}. ${item.product.name} (${appLocalizations.productNumberShort}: ${item.product.productNumber}) - ${appLocalizations.quantity}: ${item.quantity}\n';
+          '\n${appLocalizations.total}: ${totalAmountSYP(dollarExchangeRate).toStringAsFixed(2)} ${appLocalizations.currencySymbol}';
+      message += '\n\n${appLocalizations.whatsappConfirmOrder}';
     }
-    message +=
-        '\n${appLocalizations.total}: ${totalAmount.toStringAsFixed(2)} ${appLocalizations.currencySymbol}';
-    message += '\n\n${appLocalizations.whatsappConfirmOrder}';
     return message;
   }
 }
 
+/// مزود لإدارة بيانات المستخدم الحالي وحالته (أدمن أم لا).
 class UserProvider with ChangeNotifier {
   UserModel? _currentUser;
   bool _isAdmin = false;
@@ -380,6 +579,7 @@ class UserProvider with ChangeNotifier {
 
   final FirestoreService _firestoreService = FirestoreService();
 
+  /// جلب بيانات المستخدم من Firestore.
   Future<void> fetchUserData(String uid) async {
     _isLoading = true;
     try {
@@ -396,6 +596,7 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  /// تحديث بيانات المستخدم في Firestore.
   Future<void> updateUserData(
     String uid,
     String name,
@@ -408,6 +609,7 @@ class UserProvider with ChangeNotifier {
         'name': name,
         'address': address,
       });
+      // تحديث بيانات المستخدم في المزود بعد الحفظ بنجاح
       _currentUser = _currentUser?.copyWith(
         name: name,
         address: address,
@@ -421,6 +623,7 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  /// مسح بيانات المستخدم من المزود (عند تسجيل الخروج).
   void clearUser() {
     _currentUser = null;
     _isAdmin = false;
@@ -429,13 +632,16 @@ class UserProvider with ChangeNotifier {
 }
 
 // =============================================================================
-// SERVICES (Firebase Interactions)
+// SERVICES (خدمات التفاعل مع Firebase)
 // =============================================================================
 
+/// خدمة لإدارة عمليات المصادقة (التسجيل، تسجيل الدخول، تسجيل الخروج، إعادة تعيين كلمة المرور).
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirestoreService _firestoreService = FirestoreService();
 
+  /// تسجيل مستخدم جديد باستخدام البريد الإلكتروني وكلمة المرور.
+  /// يقوم أيضاً بإنشاء بيانات المستخدم في Firestore وإرسال بريد التحقق.
   Future<User?> registerWithEmailAndPassword(
     String email,
     String password,
@@ -454,8 +660,9 @@ class AuthService {
         // إرسال بريد التحقق بعد إنشاء الحساب
         await user.sendEmailVerification();
 
+        // تحديد ما إذا كان المستخدم أدمن بناءً على البريد الإلكتروني (يجب تغييره في الإنتاج)
         bool isAdmin = (email ==
-            'admin@example.com'); // IMPORTANT: Change this to your actual admin email
+            'admin@example.com'); // هام: غير هذا إلى بريدك الإلكتروني الخاص بالأدمن
         await _firestoreService.createUser(
           UserModel(
             uid: user.uid,
@@ -478,6 +685,8 @@ class AuthService {
     }
   }
 
+  /// تسجيل دخول مستخدم موجود باستخدام البريد الإلكتروني وكلمة المرور.
+  /// يتحقق أيضاً من أن البريد الإلكتروني قد تم التحقق منه.
   Future<User?> signInWithEmailAndPassword(
     String email,
     String password,
@@ -492,8 +701,8 @@ class AuthService {
 
       // التحقق من البريد الإلكتروني بعد تسجيل الدخول
       if (user != null && !user.emailVerified) {
-        // يمكن إرسال بريد التحقق مرة أخرى إذا لم يتم التحقق منه
-        // await user.sendEmailVerification(); // اختياري: أعد إرسال البريد عند محاولة تسجيل الدخول
+        // يمكن إرسال بريد التحقق مرة أخرى إذا لم يتم التحقق منه (اختياري)
+        // await user.sendEmailVerification();
         throw FirebaseAuthException(
           code: 'email-not-verified',
           message:
@@ -512,6 +721,7 @@ class AuthService {
     }
   }
 
+  /// تسجيل خروج المستخدم الحالي.
   Future<void> signOut() async {
     try {
       return await _auth.signOut();
@@ -522,10 +732,12 @@ class AuthService {
     }
   }
 
+  /// Stream يوفر تحديثات لحالة المصادقة للمستخدم.
   Stream<User?> get user {
     return _auth.authStateChanges();
   }
 
+  /// إرسال بريد إلكتروني لإعادة تعيين كلمة المرور.
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
@@ -545,9 +757,11 @@ class AuthService {
   }
 }
 
+/// خدمة للتفاعل مع قاعدة بيانات Firestore.
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  /// إنشاء مستخدم جديد في مجموعة 'users'.
   Future<void> createUser(UserModel user) async {
     await _db
         .collection('users')
@@ -555,6 +769,7 @@ class FirestoreService {
         .set(user.toFirestore());
   }
 
+  /// جلب بيانات مستخدم معين من مجموعة 'users'.
   Future<UserModel?> getUser(String uid) async {
     DocumentSnapshot doc =
         await _db.collection('users').doc(uid).get();
@@ -564,6 +779,7 @@ class FirestoreService {
     return null;
   }
 
+  /// تحديث بيانات مستخدم موجود في مجموعة 'users'.
   Future<void> updateUser(
     String uid,
     Map<String, dynamic> data,
@@ -571,6 +787,7 @@ class FirestoreService {
     await _db.collection('users').doc(uid).update(data);
   }
 
+  /// الحصول على Stream لقائمة المنتجات، مرتبة حسب الطابع الزمني تنازلياً.
   Stream<List<Product>> getProducts() {
     return _db
         .collection('products')
@@ -583,10 +800,12 @@ class FirestoreService {
     });
   }
 
+  /// إضافة منتج جديد إلى مجموعة 'products'.
   Future<void> addProduct(Product product) async {
     await _db.collection('products').add(product.toFirestore());
   }
 
+  /// تحديث بيانات منتج موجود في مجموعة 'products'.
   Future<void> updateProduct(
     String productId,
     Map<String, dynamic> data,
@@ -594,11 +813,55 @@ class FirestoreService {
     await _db.collection('products').doc(productId).update(data);
   }
 
+  /// حذف منتج من مجموعة 'products'.
   Future<void> deleteProduct(String productId) async {
     await _db.collection('products').doc(productId).delete();
   }
+
+  /// التحقق مما إذا كان رقم المنتج موجوداً بالفعل (مع استثناء المنتج الحالي عند التعديل).
+  Future<bool> checkProductNumberExists(String productNumber,
+      {String? excludeProductId}) async {
+    Query query = _db
+        .collection('products')
+        .where('productNumber', isEqualTo: productNumber);
+
+    if (excludeProductId != null) {
+      // إذا كنا نقوم بالتعديل، استبعد المنتج الحالي من التحقق
+      query = query.where(FieldPath.documentId,
+          isNotEqualTo: excludeProductId);
+    }
+
+    final querySnapshot = await query.get();
+    return querySnapshot.docs.isNotEmpty;
+  }
+
+  /// جلب سعر صرف الدولار من مجموعة 'settings'.
+  Future<double> getDollarExchangeRate() async {
+    DocumentSnapshot doc = await _db
+        .collection('settings')
+        .doc('exchangeRate')
+        .get();
+    if (doc.exists) {
+      return (doc.data() as Map<String, dynamic>)['dollarRate']
+              ?.toDouble() ??
+          0.0;
+    }
+    return 0.0; // قيمة افتراضية إذا لم يتم العثور على السعر
+  }
+
+  /// تحديث سعر صرف الدولار في مجموعة 'settings'.
+  Future<void> updateDollarExchangeRate(double newRate) async {
+    await _db.collection('settings').doc('exchangeRate').set(
+        {
+          'dollarRate': newRate,
+          'lastUpdated': FieldValue.serverTimestamp(),
+        },
+        SetOptions(
+            merge: true)); // دمج البيانات بدلاً من الكتابة فوقها
+  }
 }
 
+/// خدمة لإدارة عمليات تحميل وحذف الصور باستخدام Cloudinary.
 class StorageService {
   // قم بتغيير هذه القيم إلى بيانات اعتماد Cloudinary الخاصة بك
   final CloudinaryPublic cloudinary = CloudinaryPublic(
@@ -611,6 +874,7 @@ class StorageService {
   // ولكنك ستحتاج إلى API Secret إذا كنت ستستخدم Signed Uploads أو API Calls أخرى.
   // لغرض الأمان، يفضل استخدام Signed Uploads عبر خادم خلفي.
 
+  /// تحميل صورة منتج إلى Cloudinary.
   Future<String> uploadProductImage(
     File imageFile,
     String
@@ -643,6 +907,8 @@ class StorageService {
     }
   }
 
+  /// حذف صورة منتج من Cloudinary.
+  /// (ملاحظة: هذه العملية تتطلب عادةً خادمًا خلفيًا للأمان).
   Future<void> deleteProductImage(String imageUrl) async {
     try {
       // لاستخدام deleteResource، ستحتاج إلى API Key و API Secret
@@ -682,9 +948,10 @@ class StorageService {
 }
 
 // =============================================================================
-// WIDGETS
+// WIDGETS (مكونات الواجهة الرسومية)
 // =============================================================================
 
+/// بطاقة عرض المنتج في الشاشة الرئيسية.
 class ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback onTap;
@@ -700,20 +967,30 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appLocalizations = AppLocalizations.of(context)!;
+    // الوصول إلى مزود سعر الصرف لحساب السعر بالليرة السورية
+    final exchangeRateProvider =
+        Provider.of<ExchangeRateProvider>(context);
+    final double dollarRate =
+        exchangeRateProvider.dollarExchangeRate;
+    final double priceInSYP = product.price * dollarRate;
+
     return Card(
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: Clip
+          .antiAlias, // لضمان قص الصورة بشكل صحيح مع الحواف المستديرة
       child: InkWell(
-        onTap: onTap,
+        onTap: onTap, // دالة يتم استدعاؤها عند النقر على البطاقة
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Hero(
-                tag: product.id,
+                tag: product
+                    .id, // لإنشاء تأثير انتقال سلس بين الشاشات
                 child: Image.network(
                   product.imageUrl,
                   fit: BoxFit.cover,
                   width: double.infinity,
+                  // دالة لبناء واجهة بديلة في حالة فشل تحميل الصورة
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
                       color: Colors.grey[200],
@@ -733,21 +1010,24 @@ class ProductCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product.name,
+                    product.getLocalizedName(
+                        context), // استخدام الاسم المترجم
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    overflow: TextOverflow
+                        .ellipsis, // لإظهار "..." إذا كان النص طويلاً
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${product.price.toStringAsFixed(2)} ${appLocalizations.currencySymbol}',
+                    // عرض السعر بالليرة السورية
+                    '${priceInSYP.toStringAsFixed(2)} ${appLocalizations.currencySymbol}',
                     style: TextStyle(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.secondary,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .secondary,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -756,7 +1036,8 @@ class ProductCard extends StatelessWidget {
                   Align(
                     alignment: Alignment.bottomRight,
                     child: ElevatedButton.icon(
-                      onPressed: onAddToCart,
+                      onPressed:
+                          onAddToCart, // دالة يتم استدعاؤها عند النقر على زر "إضافة إلى السلة"
                       icon: const Icon(
                         Icons.add_shopping_cart,
                         size: 18,
@@ -782,9 +1063,10 @@ class ProductCard extends StatelessWidget {
 }
 
 // =============================================================================
-// SCREENS
+// SCREENS (الشاشات)
 // =============================================================================
 
+/// شاشة المصادقة (تسجيل الدخول/التسجيل).
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -793,24 +1075,30 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  final _formKey = GlobalKey<FormState>();
-  bool _isLogin = true;
+  final _formKey = GlobalKey<
+      FormState>(); // مفتاح لـ Form Widget للتحقق من صحة المدخلات
+  bool _isLogin =
+      true; // لتحديد ما إذا كانت الشاشة لوضع تسجيل الدخول أو التسجيل
   String _email = '';
   String _password = '';
   String _confirmPassword = '';
   String _name = '';
   String _address = '';
-  bool _isLoading = false;
+  bool _isLoading =
+      false; // لإظهار مؤشر التحميل أثناء عمليات الشبكة
 
-  final AuthService _authService = AuthService();
+  final AuthService _authService =
+      AuthService(); // خدمة المصادقة
 
   final TextEditingController _passwordController =
-      TextEditingController();
+      TextEditingController(); // للتحكم في حقل كلمة المرور
   final TextEditingController _confirmPasswordController =
-      TextEditingController();
+      TextEditingController(); // للتحكم في حقل تأكيد كلمة المرور
 
+  /// دالة مساعدة لعرض رسائل SnackBar للمستخدم.
   void _showSnackBar(String message, {bool isError = false}) {
-    if (!mounted) return;
+    if (!mounted)
+      return; // التأكد من أن الـ Widget لا يزال موجوداً في الشجرة
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -820,25 +1108,29 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
+  /// دالة لإرسال نموذج المصادقة (تسجيل الدخول أو التسجيل).
   Future<void> _submitAuthForm() async {
     final appLocalizations = AppLocalizations.of(context)!;
+    // التحقق من صحة جميع حقول النموذج
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    _formKey.currentState!.save();
+    _formKey.currentState!.save(); // حفظ قيم الحقول
 
     setState(() {
-      _isLoading = true;
+      _isLoading = true; // بدء التحميل
     });
 
     try {
       User? user;
       if (_isLogin) {
+        // محاولة تسجيل الدخول
         user = await _authService.signInWithEmailAndPassword(
           _email,
           _password,
         );
       } else {
+        // محاولة التسجيل
         if (_password != _confirmPassword) {
           _showSnackBar(appLocalizations.passwordMismatch,
               isError: true);
@@ -859,12 +1151,14 @@ class _AuthScreenState extends State<AuthScreen> {
 
       if (user != null) {
         if (_isLogin) {
+          // جلب بيانات المستخدم بعد تسجيل الدخول بنجاح
           await Provider.of<UserProvider>(
             context,
             listen: false,
           ).fetchUserData(user.uid);
           _showSnackBar(appLocalizations.loggedInSuccessfully);
           if (mounted) {
+            // الانتقال إلى الشاشة الرئيسية بعد تسجيل الدخول
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
                 builder: (ctx) => const HomeScreen(),
@@ -887,6 +1181,7 @@ class _AuthScreenState extends State<AuthScreen> {
         }
       }
     } on FirebaseAuthException catch (e) {
+      // معالجة أخطاء المصادقة من Firebase
       String errorMessage = appLocalizations.authError;
       if (e.code == 'user-not-found') {
         errorMessage = appLocalizations.userNotFound;
@@ -906,6 +1201,7 @@ class _AuthScreenState extends State<AuthScreen> {
       }
       _showSnackBar(errorMessage, isError: true);
     } catch (e) {
+      // معالجة الأخطاء العامة
       _showSnackBar(
         '${appLocalizations.errorOccurred}${e.toString().replaceFirst('Exception: ', '')}',
         isError: true,
@@ -913,7 +1209,7 @@ class _AuthScreenState extends State<AuthScreen> {
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isLoading = false; // إنهاء التحميل
         });
       }
     }
@@ -921,7 +1217,8 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   void dispose() {
-    _passwordController.dispose();
+    _passwordController
+        .dispose(); // التخلص من المتحكمات لتجنب تسرب الذاكرة
     _confirmPasswordController.dispose();
     super.dispose();
   }
@@ -972,7 +1269,8 @@ class _AuthScreenState extends State<AuthScreen> {
                     TextFormField(
                       key: const ValueKey('password'),
                       controller: _passwordController,
-                      obscureText: true,
+                      obscureText:
+                          true, // لإخفاء النص المدخل (كلمة المرور)
                       decoration: InputDecoration(
                         labelText: appLocalizations.password,
                         prefixIcon: const Icon(Icons.lock),
@@ -988,6 +1286,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
+                    // عرض حقول التسجيل الإضافية فقط إذا كانت الشاشة في وضع التسجيل
                     if (!_isLogin)
                       Column(
                         children: [
@@ -1048,6 +1347,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         ],
                       ),
                     const SizedBox(height: 20),
+                    // عرض مؤشر التحميل أو الزر بناءً على حالة التحميل
                     _isLoading
                         ? const CircularProgressIndicator()
                         : ElevatedButton(
@@ -1064,10 +1364,13 @@ class _AuthScreenState extends State<AuthScreen> {
                       onPressed: () {
                         if (mounted) {
                           setState(() {
-                            _isLogin = !_isLogin;
-                            _passwordController.clear();
+                            _isLogin =
+                                !_isLogin; // تبديل وضع الشاشة
+                            _passwordController
+                                .clear(); // مسح حقول كلمة المرور
                             _confirmPasswordController.clear();
-                            _formKey.currentState?.reset();
+                            _formKey.currentState
+                                ?.reset(); // إعادة تعيين حالة النموذج
                           });
                         }
                       },
@@ -1080,9 +1383,11 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                       ),
                     ),
+                    // عرض زر "نسيت كلمة المرور" فقط في وضع تسجيل الدخول
                     if (_isLogin)
                       TextButton(
                         onPressed: () async {
+                          // التحقق من صحة البريد الإلكتروني قبل إرسال رابط إعادة التعيين
                           if (_email.isEmpty ||
                               !_email.contains('@')) {
                             _showSnackBar(
@@ -1135,6 +1440,7 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 }
 
+/// الشاشة الرئيسية للتطبيق، تعرض قائمة المنتجات.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -1145,6 +1451,18 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final AuthService _authService = AuthService();
+
+  /// دالة لتحديث البيانات عند السحب للأسفل.
+  Future<void> _onRefresh() async {
+    // إعادة جلب سعر الصرف
+    await Provider.of<ExchangeRateProvider>(context,
+            listen: false)
+        ._fetchExchangeRate();
+    // بما أن getProducts() هو StreamBuilder، فإنه يستمع للتغييرات تلقائياً.
+    // يمكننا فقط إرجاع Future.value(true) لإغلاق مؤشر التحديث.
+    // إذا كانت هناك حاجة لإعادة تحميل المنتجات بشكل صريح، يمكن إضافة منطق هنا.
+    return Future.value(true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1160,9 +1478,11 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
+            icon: const Icon(
+                Icons.menu), // أيقونة القائمة الجانبية
             onPressed: () {
-              Scaffold.of(context).openDrawer();
+              Scaffold.of(context)
+                  .openDrawer(); // فتح القائمة الجانبية
             },
           ),
         ),
@@ -1170,7 +1490,8 @@ class _HomeScreenState extends State<HomeScreen> {
           Stack(
             children: [
               IconButton(
-                icon: const Icon(Icons.shopping_cart),
+                icon: const Icon(
+                    Icons.shopping_cart), // أيقونة سلة التسوق
                 onPressed: () {
                   if (mounted) {
                     Navigator.of(context).push(
@@ -1181,6 +1502,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                 },
               ),
+              // عرض عدد العناصر في السلة إذا كان أكبر من صفر
               if (cartProvider.itemCount > 0)
                 Positioned(
                   right: 5,
@@ -1214,6 +1536,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
+            // رأس القائمة الجانبية مع معلومات المستخدم
             UserAccountsDrawerHeader(
               accountName: Text(
                 userProvider.currentUser?.name ??
@@ -1248,7 +1571,8 @@ class _HomeScreenState extends State<HomeScreen> {
               title: Text(appLocalizations.home),
               onTap: () {
                 if (mounted) {
-                  Navigator.pop(context);
+                  Navigator.pop(
+                      context); // إغلاق القائمة الجانبية
                 }
               },
             ),
@@ -1267,6 +1591,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               },
             ),
+            // عرض لوحة الأدمن فقط إذا كان المستخدم أدمن
             if (userProvider.isAdmin)
               ListTile(
                 leading: const Icon(Icons.admin_panel_settings),
@@ -1309,10 +1634,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (mounted) {
                   Navigator.pop(context);
                 }
-                await _authService.signOut();
-                userProvider.clearUser();
-                cartProvider.clearCart();
+                await _authService
+                    .signOut(); // تسجيل الخروج من Firebase
+                userProvider
+                    .clearUser(); // مسح بيانات المستخدم من المزود
+                cartProvider.clearCart(); // مسح سلة التسوق
                 if (mounted) {
+                  // العودة إلى شاشة المصادقة وإزالة جميع الشاشات السابقة من الـ stack
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(
                       builder: (ctx) => const AuthScreen(),
@@ -1325,84 +1653,111 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      body: StreamBuilder<List<Product>>(
-        stream: _firestoreService.getProducts(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState ==
-              ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                '${appLocalizations.loadingProductsError}${snapshot.error}',
-              ),
-            );
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Text(
-                appLocalizations.noProducts,
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.black54,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            );
-          }
-
-          final products = snapshot.data!;
-          return GridView.builder(
-            padding: const EdgeInsets.all(16.0),
-            gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.75,
-              crossAxisSpacing: 16.0,
-              mainAxisSpacing: 16.0,
-            ),
-            itemCount: products.length,
-            itemBuilder: (ctx, index) {
-              final product = products[index];
-              return ProductCard(
-                product: product,
-                onTap: () {
-                  if (mounted) {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (ctx) => ProductDetailScreen(
-                          product: product,
-                        ),
-                      ),
-                    );
-                  }
-                },
-                onAddToCart: () {
-                  cartProvider.addItem(product);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          appLocalizations
-                              .productAddedToCart(product.name),
-                        ),
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
-                  }
-                },
+      // إضافة RefreshIndicator للسحب للأسفل لتحديث الصفحة
+      body: RefreshIndicator(
+        onRefresh: _onRefresh, // دالة التحديث
+        child: StreamBuilder<List<Product>>(
+          stream: _firestoreService
+              .getProducts(), // الاستماع لتغييرات المنتجات في Firestore
+          builder: (context, snapshot) {
+            // عرض مؤشر التحميل
+            if (snapshot.connectionState ==
+                ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(),
               );
-            },
-          );
-        },
+            }
+            // عرض رسالة خطأ إذا كان هناك خطأ في جلب البيانات
+            if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  '${appLocalizations.loadingProductsError}${snapshot.error}',
+                ),
+              );
+            }
+            // عرض رسالة إذا لم تكن هناك منتجات
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Center(
+                child: Text(
+                  appLocalizations.noProducts,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: Colors.black54,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              );
+            }
+
+            final products = snapshot.data!;
+            return GridView.builder(
+              padding: const EdgeInsets.all(16.0),
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2, // عمودين في الشبكة
+                childAspectRatio:
+                    0.75, // نسبة العرض إلى الارتفاع لكل عنصر
+                crossAxisSpacing:
+                    16.0, // المسافة الأفقية بين العناصر
+                mainAxisSpacing:
+                    16.0, // المسافة العمودية بين العناصر
+              ),
+              itemCount: products.length,
+              itemBuilder: (ctx, index) {
+                final product = products[index];
+                return ProductCard(
+                  product: product,
+                  onTap: () {
+                    // تحديث سلوك النقر للمنتجات بناءً على دور المستخدم
+                    if (userProvider.isAdmin) {
+                      if (mounted) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (ctx) =>
+                                ManageProductScreen(
+                              product: product,
+                            ),
+                          ),
+                        );
+                      }
+                    } else {
+                      if (mounted) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (ctx) =>
+                                ProductDetailScreen(
+                              product: product,
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  onAddToCart: () {
+                    cartProvider.addItem(product);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            appLocalizations.productAddedToCart(
+                                product.getLocalizedName(
+                                    context)), // استخدام الاسم المترجم
+                          ),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    }
+                  },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
 
-  // دالة لعرض مربع حوار اختيار اللغة
+  /// دالة لعرض مربع حوار لاختيار لغة التطبيق.
   void _showLanguagePickerDialog(
       BuildContext context, LocaleProvider localeProvider) {
     final appLocalizations = AppLocalizations.of(context)!;
@@ -1416,9 +1771,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               title: const Text('English'),
               onTap: () {
-                localeProvider.setLocale(const Locale('en', ''));
+                localeProvider.setLocale(const Locale(
+                    'en', '')); // تعيين اللغة الإنجليزية
                 if (mounted) {
-                  Navigator.of(ctx).pop();
+                  Navigator.of(ctx).pop(); // إغلاق مربع الحوار
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(appLocalizations
@@ -1432,9 +1788,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               title: const Text('العربية'),
               onTap: () {
-                localeProvider.setLocale(const Locale('ar', ''));
+                localeProvider.setLocale(const Locale(
+                    'ar', '')); // تعيين اللغة العربية
                 if (mounted) {
-                  Navigator.of(ctx).pop();
+                  Navigator.of(ctx).pop(); // إغلاق مربع الحوار
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(appLocalizations
@@ -1452,6 +1809,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+/// شاشة تفاصيل المنتج.
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
 
@@ -1464,8 +1822,9 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState
     extends State<ProductDetailScreen> {
-  int _quantity = 1;
+  int _quantity = 1; // كمية المنتج المراد إضافتها إلى السلة
 
+  /// دالة مساعدة لعرض رسائل SnackBar للمستخدم.
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1484,16 +1843,24 @@ class _ProductDetailScreenState
       listen: false,
     );
     final appLocalizations = AppLocalizations.of(context)!;
+    final exchangeRateProvider =
+        Provider.of<ExchangeRateProvider>(context);
+    final double dollarRate =
+        exchangeRateProvider.dollarExchangeRate;
+    final double priceInSYP = widget.product.price *
+        dollarRate; // حساب السعر بالليرة السورية
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.product.name)),
+      appBar: AppBar(
+          title: Text(widget.product.getLocalizedName(
+              context))), // استخدام الاسم المترجم في الـ AppBar
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Hero(
-              tag: widget.product.id,
+              tag: widget.product.id, // لإنشاء تأثير انتقال سلس
               child: Image.network(
                 widget.product.imageUrl,
                 fit: BoxFit.cover,
@@ -1514,7 +1881,8 @@ class _ProductDetailScreenState
             ),
             const SizedBox(height: 20),
             Text(
-              widget.product.name,
+              widget.product.getLocalizedName(
+                  context), // استخدام الاسم المترجم
               style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -1522,11 +1890,21 @@ class _ProductDetailScreenState
             ),
             const SizedBox(height: 10),
             Text(
-              '${widget.product.price.toStringAsFixed(2)} ${appLocalizations.currencySymbol}',
+              // عرض السعر بالليرة السورية
+              '${priceInSYP.toStringAsFixed(2)} ${appLocalizations.currencySymbol}',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.secondary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              // عرض السعر بالدولار أيضًا (اختياري)
+              '${appLocalizations.priceUSD}: ${widget.product.price.toStringAsFixed(2)} \$',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black54,
               ),
             ),
             const SizedBox(height: 10),
@@ -1539,7 +1917,8 @@ class _ProductDetailScreenState
             ),
             const SizedBox(height: 20),
             Text(
-              widget.product.description,
+              widget.product.getLocalizedDescription(
+                  context), // استخدام الوصف المترجم
               style: const TextStyle(fontSize: 16, height: 1.5),
             ),
             const SizedBox(height: 30),
@@ -1585,7 +1964,8 @@ class _ProductDetailScreenState
                   );
                   _showSnackBar(
                     appLocalizations.productQuantityAddedToCart(
-                      widget.product.name,
+                      widget.product.getLocalizedName(
+                          context), // استخدام الاسم المترجم
                       _quantity,
                     ),
                   );
@@ -1607,9 +1987,14 @@ class _ProductDetailScreenState
   }
 }
 
+/// شاشة سلة التسوق.
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
+  // رقم الواتساب الموحد المستخدم في التطبيق (سوريا)
+  static const String _whatsappPhoneNumber = '963980756485';
+
+  /// دالة مساعدة لعرض رسائل SnackBar للمستخدم.
   void _showSnackBar(
     BuildContext context,
     String message, {
@@ -1624,73 +2009,60 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  // Helper to launch WhatsApp
+  /// دالة مساعدة لفتح تطبيق واتساب أو واتساب ويب.
   Future<void> _launchWhatsApp({
     required BuildContext context,
     required String phoneNumber,
     required String message,
-    String?
-        appPackage, // e.g., 'com.whatsapp' or 'com.whatsapp.w4b' for Android
   }) async {
     final appLocalizations = AppLocalizations.of(context)!;
-    String url =
-        'whatsapp://send?phone=$phoneNumber&text=${Uri.encodeComponent(message)}';
 
-    // On Android, we can try to target a specific package.
-    // On iOS, the 'whatsapp://' scheme usually opens the correct app if installed.
-    // For a more robust solution on Android, consider `url_launcher_android` to specify package.
-    if (Platform.isAndroid && appPackage != null) {
-      try {
-        // This is a common way to try specific package on Android, but not guaranteed on all devices/versions.
-        // It tries to open the URL, and if it fails, it might fall back to general intent.
-        bool launched = await launchUrl(
-          Uri.parse(url),
+    // تنظيف رقم الهاتف للتأكد من أنه بتنسيق أرقام فقط
+    String cleanedPhoneNumber =
+        phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+
+    // محاولة فتح تطبيق واتساب مباشرةً
+    String whatsappAppUrl =
+        'whatsapp://send?phone=$cleanedPhoneNumber&text=${Uri.encodeComponent(message)}';
+
+    try {
+      bool launched = await launchUrl(
+        Uri.parse(whatsappAppUrl),
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!launched) {
+        // إذا فشل فتح التطبيق، العودة إلى واتساب عبر الويب (wa.me)
+        String webWhatsappUrl =
+            'https://wa.me/$cleanedPhoneNumber?text=${Uri.encodeComponent(message)}';
+        bool webLaunched = await launchUrl(
+          Uri.parse(webWhatsappUrl),
           mode: LaunchMode.externalApplication,
         );
-        if (!launched) {
-          // Fallback to general URL if specific package launch fails
-          await launchUrl(Uri.parse(url),
-              mode: LaunchMode.externalApplication);
-        }
-      } catch (e) {
-        print(
-            'Error trying to launch specific WhatsApp package: $e'); // For debug
-        // Fallback to general launch if specific package launch throws an error
-        try {
-          await launchUrl(Uri.parse(url),
-              mode: LaunchMode.externalApplication);
-        } catch (e) {
+
+        if (!webLaunched) {
           _showSnackBar(
             context,
             appLocalizations.whatsappNotInstalled,
             isError: true,
           );
-          print(
-              'Error launching WhatsApp (general fallback): $e'); // For debug
         }
       }
-    } else {
-      // For iOS and others, general launch usually works
-      try {
-        await launchUrl(Uri.parse(url),
-            mode: LaunchMode.externalApplication);
-      } catch (e) {
-        _showSnackBar(
-          context,
-          appLocalizations.whatsappNotInstalled,
-          isError: true,
-        );
-        print(
-            'Error launching WhatsApp (iOS/general): $e'); // For debug
-      }
+    } catch (e) {
+      // التقاط أي أخطاء أثناء محاولة launchUrl نفسها
+      _showSnackBar(
+        context,
+        appLocalizations.whatsappNotInstalled,
+        isError: true,
+      );
+      print('Error launching WhatsApp: $e'); // For debug
     }
   }
 
+  /// دالة لعرض مربع حوار لاختيار بين واتساب العادي أو واتساب للأعمال.
   Future<void> _showWhatsAppChoiceDialog(
       BuildContext context, String message) async {
     final appLocalizations = AppLocalizations.of(context)!;
-    const String whatsappNumber =
-        '+966980756485'; // الرقم الجديد للواتساب
 
     await showDialog(
       context: context,
@@ -1703,10 +2075,9 @@ class CartScreen extends StatelessWidget {
               Navigator.of(ctx).pop();
               _launchWhatsApp(
                 context: context,
-                phoneNumber: whatsappNumber,
+                phoneNumber:
+                    _whatsappPhoneNumber, // استخدام الرقم الموحد
                 message: message,
-                appPackage:
-                    'com.whatsapp', // Standard WhatsApp package for Android
               );
             },
             child: Text(appLocalizations.whatsappStandard),
@@ -1716,10 +2087,9 @@ class CartScreen extends StatelessWidget {
               Navigator.of(ctx).pop();
               _launchWhatsApp(
                 context: context,
-                phoneNumber: whatsappNumber,
+                phoneNumber:
+                    _whatsappPhoneNumber, // استخدام الرقم الموحد
                 message: message,
-                appPackage:
-                    'com.whatsapp.w4b', // WhatsApp Business package for Android
               );
             },
             child: Text(appLocalizations.whatsappBusiness),
@@ -1732,6 +2102,12 @@ class CartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cartProvider = Provider.of<CartProvider>(context);
+    final userProvider = Provider.of<UserProvider>(
+        context); // للحصول على بيانات المستخدم
+    final exchangeRateProvider =
+        Provider.of<ExchangeRateProvider>(context);
+    final double dollarRate =
+        exchangeRateProvider.dollarExchangeRate;
     final appLocalizations = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -1772,6 +2148,8 @@ class CartScreen extends StatelessWidget {
                     itemCount: cartProvider.items.length,
                     itemBuilder: (ctx, index) {
                       final cartItem = cartProvider.items[index];
+                      final double priceInSYP =
+                          cartItem.product.price * dollarRate;
                       return Card(
                         margin: const EdgeInsets.symmetric(
                           vertical: 8.0,
@@ -1820,7 +2198,9 @@ class CartScreen extends StatelessWidget {
                                       CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      cartItem.product.name,
+                                      cartItem.product
+                                          .getLocalizedName(
+                                              context), // استخدام الاسم المترجم
                                       style: const TextStyle(
                                         fontWeight:
                                             FontWeight.bold,
@@ -1832,7 +2212,8 @@ class CartScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${cartItem.product.price.toStringAsFixed(2)} ${appLocalizations.currencySymbol}',
+                                      // عرض السعر بالليرة السورية
+                                      '${priceInSYP.toStringAsFixed(2)} ${appLocalizations.currencySymbol}',
                                       style: TextStyle(
                                         color: Theme.of(context)
                                             .colorScheme
@@ -1840,6 +2221,14 @@ class CartScreen extends StatelessWidget {
                                         fontSize: 14,
                                         fontWeight:
                                             FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      // عرض السعر بالدولار أيضًا (اختياري)
+                                      '${appLocalizations.priceUSD}: ${cartItem.product.price.toStringAsFixed(2)} \$',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black54,
                                       ),
                                     ),
                                     const SizedBox(height: 8),
@@ -1924,13 +2313,14 @@ class CartScreen extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${cartProvider.totalAmount.toStringAsFixed(2)} ${appLocalizations.currencySymbol}',
+                            // عرض الإجمالي بالليرة السورية
+                            '${cartProvider.totalAmountSYP(dollarRate).toStringAsFixed(2)} ${appLocalizations.currencySymbol}',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.secondary,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .secondary,
                             ),
                           ),
                         ],
@@ -1938,17 +2328,21 @@ class CartScreen extends StatelessWidget {
                       const SizedBox(height: 20),
                       ElevatedButton.icon(
                         onPressed: () {
+                          // إرسال بيانات المستخدم وسعر الصرف مع رسالة الواتساب
                           _showWhatsAppChoiceDialog(
                               context,
-                              cartProvider
-                                  .getWhatsAppMessage(context));
+                              cartProvider.getWhatsAppMessage(
+                                  context,
+                                  userProvider.currentUser,
+                                  dollarRate));
                           cartProvider.clearCart();
                           _showSnackBar(
                             context,
                             appLocalizations.orderSent,
                           );
                         },
-                        icon: const Icon(Icons.facebook),
+                        icon: const Icon(Icons
+                            .chat), // تغيير الأيقونة إلى أيقونة عامة
                         label: Text(
                           appLocalizations.sendOrderWhatsApp,
                         ),
@@ -1979,6 +2373,7 @@ class CartScreen extends StatelessWidget {
   }
 }
 
+/// شاشة إعدادات المستخدم.
 class UserSettingsScreen extends StatefulWidget {
   const UserSettingsScreen({super.key});
 
@@ -1998,6 +2393,7 @@ class _UserSettingsScreenState
   @override
   void initState() {
     super.initState();
+    // تهيئة المتحكمات بقيم المستخدم الحالية
     final userProvider = Provider.of<UserProvider>(
       context,
       listen: false,
@@ -2017,6 +2413,7 @@ class _UserSettingsScreenState
     super.dispose();
   }
 
+  /// دالة مساعدة لعرض رسائل SnackBar للمستخدم.
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -2028,6 +2425,7 @@ class _UserSettingsScreenState
     );
   }
 
+  /// تحديث بيانات المستخدم (الاسم والعنوان).
   Future<void> _updateUserData() async {
     final appLocalizations = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) {
@@ -2069,6 +2467,7 @@ class _UserSettingsScreenState
     }
   }
 
+  /// دالة لتغيير كلمة مرور المستخدم.
   Future<void> _changePassword() async {
     final appLocalizations = AppLocalizations.of(context)!;
     String? currentPassword;
@@ -2118,6 +2517,7 @@ class _UserSettingsScreenState
           ),
           ElevatedButton(
             onPressed: () async {
+              // التحقق من صحة المدخلات
               if (newPassword == null ||
                   newPassword!.length < 6) {
                 _showSnackBar(
@@ -2136,8 +2536,7 @@ class _UserSettingsScreenState
               if (currentPassword == null ||
                   currentPassword!.isEmpty) {
                 _showSnackBar(
-                  appLocalizations
-                      .enterCurrentPassword, // Corrected to use translated string
+                  appLocalizations.enterCurrentPassword,
                   isError: true,
                 );
                 return;
@@ -2151,6 +2550,7 @@ class _UserSettingsScreenState
               try {
                 User? user = FirebaseAuth.instance.currentUser;
                 if (user != null) {
+                  // إعادة مصادقة المستخدم قبل تغيير كلمة المرور
                   AuthCredential credential =
                       EmailAuthProvider.credential(
                     email: user.email!,
@@ -2159,7 +2559,8 @@ class _UserSettingsScreenState
                   await user.reauthenticateWithCredential(
                     credential,
                   );
-                  await user.updatePassword(newPassword!);
+                  await user.updatePassword(
+                      newPassword!); // تحديث كلمة المرور
                   _showSnackBar(
                     appLocalizations.passwordChangeSuccess,
                   );
@@ -2168,6 +2569,7 @@ class _UserSettingsScreenState
                   }
                 }
               } on FirebaseAuthException catch (e) {
+                // معالجة أخطاء المصادقة
                 String errorMessage =
                     appLocalizations.passwordChangeFailed;
                 if (e.code == 'wrong-password') {
@@ -2234,7 +2636,8 @@ class _UserSettingsScreenState
                         text: userProvider.currentUser?.email ??
                             appLocalizations.notAvailable,
                       ),
-                      readOnly: true,
+                      readOnly:
+                          true, // جعل حقل البريد الإلكتروني للقراءة فقط
                       decoration: InputDecoration(
                         labelText: appLocalizations.email,
                         prefixIcon: const Icon(Icons.email),
@@ -2293,13 +2696,16 @@ class _UserSettingsScreenState
                     Center(
                       child: ElevatedButton.icon(
                         onPressed: () async {
-                          await _authService.signOut();
-                          userProvider.clearUser();
+                          await _authService
+                              .signOut(); // تسجيل الخروج
+                          userProvider
+                              .clearUser(); // مسح بيانات المستخدم
                           Provider.of<CartProvider>(
                             context,
                             listen: false,
-                          ).clearCart();
+                          ).clearCart(); // مسح سلة التسوق
                           if (mounted) {
+                            // العودة إلى شاشة المصادقة وإزالة جميع الشاشات السابقة
                             Navigator.of(
                               context,
                             ).pushAndRemoveUntil(
@@ -2327,6 +2733,7 @@ class _UserSettingsScreenState
   }
 }
 
+/// شاشة لوحة تحكم الأدمن، لإدارة المنتجات وسعر صرف الدولار.
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key});
 
@@ -2338,7 +2745,28 @@ class AdminPanelScreen extends StatefulWidget {
 class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final StorageService _storageService = StorageService();
+  late TextEditingController _dollarRateController;
+  bool _isLoadingExchangeRate = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // تهيئة متحكم سعر الدولار بقيمته الحالية من المزود
+    _dollarRateController = TextEditingController(
+      text: Provider.of<ExchangeRateProvider>(context,
+              listen: false)
+          .dollarExchangeRate
+          .toStringAsFixed(2),
+    );
+  }
+
+  @override
+  void dispose() {
+    _dollarRateController.dispose();
+    super.dispose();
+  }
+
+  /// دالة مساعدة لعرض رسائل SnackBar للمستخدم.
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -2350,15 +2778,53 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
+  /// دالة لتحديث سعر صرف الدولار.
+  Future<void> _updateDollarRate() async {
+    final appLocalizations = AppLocalizations.of(context)!;
+    final newRate =
+        double.tryParse(_dollarRateController.text.trim());
+
+    if (newRate == null || newRate <= 0) {
+      _showSnackBar(appLocalizations.enterValidPrice,
+          isError: true);
+      return;
+    }
+
+    setState(() {
+      _isLoadingExchangeRate = true;
+    });
+
+    try {
+      await Provider.of<ExchangeRateProvider>(context,
+              listen: false)
+          .updateDollarExchangeRate(newRate);
+      _showSnackBar(appLocalizations.dollarExchangeRateUpdated);
+    } catch (e) {
+      _showSnackBar(
+        '${appLocalizations.operationFailed}${e.toString().replaceFirst('Exception: ', '')}',
+        isError: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingExchangeRate = false;
+        });
+      }
+    }
+  }
+
+  /// دالة لحذف منتج.
   Future<void> _deleteProduct(Product product) async {
     final appLocalizations = AppLocalizations.of(context)!;
+    // عرض مربع حوار للتأكيد قبل الحذف
     bool confirm = await showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
             title: Text(appLocalizations.confirmDelete),
             content: Text(
-              appLocalizations
-                  .confirmDeleteProduct(product.name),
+              appLocalizations.confirmDeleteProduct(
+                  product.getLocalizedName(
+                      context)), // استخدام الاسم المترجم
             ),
             actions: [
               TextButton(
@@ -2404,127 +2870,237 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
+  /// دالة لتحديث البيانات عند السحب للأسفل.
+  Future<void> _onRefresh() async {
+    // إعادة جلب سعر الصرف
+    await Provider.of<ExchangeRateProvider>(context,
+            listen: false)
+        ._fetchExchangeRate();
+    // بما أن getProducts() هو StreamBuilder، فإنه يستمع للتغييرات تلقائياً.
+    // يمكننا فقط إرجاع Future.value(true) لإغلاق مؤشر التحديث.
+    return Future.value(true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final appLocalizations = AppLocalizations.of(context)!;
+    final exchangeRateProvider =
+        Provider.of<ExchangeRateProvider>(context);
+    final double dollarRate =
+        exchangeRateProvider.dollarExchangeRate;
+
+    // تحديث قيمة controller عندما يتغير سعر الصرف من Provider
+    // يتم هذا الشرط لتجنب التحديث اللانهائي عند إعادة بناء الـ widget
+    if (_dollarRateController.text !=
+            dollarRate.toStringAsFixed(2) &&
+        !_isLoadingExchangeRate) {
+      _dollarRateController.text = dollarRate.toStringAsFixed(2);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(appLocalizations.adminPanelTitle),
         centerTitle: true,
       ),
-      body: StreamBuilder<List<Product>>(
-        stream: _firestoreService.getProducts(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState ==
-              ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                '${appLocalizations.loadingProductsError}${snapshot.error}',
-              ),
-            );
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Text(
-                appLocalizations.noProducts,
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.black54,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            );
-          }
-
-          final products = snapshot.data!;
-          return ListView.builder(
+      body: Column(
+        children: [
+          // حقل إدخال سعر الدولار
+          Padding(
             padding: const EdgeInsets.all(16.0),
-            itemCount: products.length,
-            itemBuilder: (ctx, index) {
-              final product = products[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(
-                  vertical: 8.0,
-                ),
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ListTile(
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(8.0),
-                    child: Image.network(
-                      product.imageUrl,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      errorBuilder: (
-                        context,
-                        error,
-                        stackTrace,
-                      ) {
-                        return Container(
-                          width: 60,
-                          height: 60,
-                          color: Colors.grey[200],
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            size: 30,
-                            color: Colors.grey,
+            child: Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      appLocalizations.dollarExchangeRate,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _dollarRateController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: appLocalizations
+                                  .dollarExchangeRate,
+                              prefixIcon:
+                                  const Icon(Icons.attach_money),
+                              suffixText: appLocalizations
+                                  .syrianPound, // ل.س
+                            ),
+                            validator: (value) {
+                              if (value == null ||
+                                  value.trim().isEmpty ||
+                                  double.tryParse(value) ==
+                                      null ||
+                                  double.parse(value) <= 0) {
+                                return appLocalizations
+                                    .enterValidPrice;
+                              }
+                              return null;
+                            },
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                  title: Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Text(
-                    '${product.price.toStringAsFixed(2)} ${appLocalizations.currencySymbol} - ${appLocalizations.productNumberShort}: ${product.productNumber}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.edit,
-                          color: Colors.blue,
                         ),
-                        onPressed: () {
-                          if (mounted) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (ctx) =>
-                                    ManageProductScreen(
-                                  product: product,
+                        const SizedBox(width: 10),
+                        _isLoadingExchangeRate
+                            ? const CircularProgressIndicator()
+                            : ElevatedButton(
+                                onPressed: _updateDollarRate,
+                                style: ElevatedButton.styleFrom(
+                                  padding:
+                                      const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 15),
                                 ),
+                                child: Text(appLocalizations
+                                    .saveChanges),
                               ),
-                            );
-                          }
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete,
-                          color: Colors.red,
-                        ),
-                        onPressed: () => _deleteProduct(product),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ),
-              );
-            },
-          );
-        },
+              ),
+            ),
+          ),
+          // قائمة المنتجات (مع RefreshIndicator)
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _onRefresh, // دالة التحديث
+              child: StreamBuilder<List<Product>>(
+                stream: _firestoreService.getProducts(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        '${appLocalizations.loadingProductsError}${snapshot.error}',
+                      ),
+                    );
+                  }
+                  if (!snapshot.hasData ||
+                      snapshot.data!.isEmpty) {
+                    return Center(
+                      child: Text(
+                        appLocalizations.noProducts,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.black54,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  }
+
+                  final products = snapshot.data!;
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16.0),
+                    itemCount: products.length,
+                    itemBuilder: (ctx, index) {
+                      final product = products[index];
+                      final double priceInSYP = product.price *
+                          dollarRate; // حساب السعر بالليرة السورية
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                          vertical: 8.0,
+                        ),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          leading: ClipRRect(
+                            borderRadius:
+                                BorderRadius.circular(8.0),
+                            child: Image.network(
+                              product.imageUrl,
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                              errorBuilder: (
+                                context,
+                                error,
+                                stackTrace,
+                              ) {
+                                return Container(
+                                  width: 60,
+                                  height: 60,
+                                  color: Colors.grey[200],
+                                  child: const Icon(
+                                    Icons.image_not_supported,
+                                    size: 30,
+                                    color: Colors.grey,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          title: Text(
+                            product.getLocalizedName(
+                                context), // استخدام الاسم المترجم
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '${product.price.toStringAsFixed(2)} \$ - ${priceInSYP.toStringAsFixed(2)} ${appLocalizations.currencySymbol} - ${appLocalizations.productNumberShort}: ${product.productNumber}',
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: Colors.blue,
+                                ),
+                                onPressed: () {
+                                  if (mounted) {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (ctx) =>
+                                            ManageProductScreen(
+                                          product: product,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () =>
+                                    _deleteProduct(product),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          )
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -2542,8 +3118,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 }
 
+/// شاشة إدارة المنتج (إضافة/تعديل).
 class ManageProductScreen extends StatefulWidget {
-  final Product? product;
+  final Product?
+      product; // المنتج المراد تعديله (إذا كان null، فهذا يعني إضافة منتج جديد)
 
   const ManageProductScreen({super.key, this.product});
 
@@ -2559,42 +3137,62 @@ class _ManageProductScreenState
   final StorageService _storageService = StorageService();
   final ImagePicker _picker = ImagePicker();
 
-  late TextEditingController _nameController;
+  late TextEditingController
+      _nameArController; // متحكم لاسم المنتج باللغة العربية
+  late TextEditingController
+      _nameEnController; // متحكم لاسم المنتج باللغة الإنجليزية
   late TextEditingController _productNumberController;
-  late TextEditingController _priceController;
-  late TextEditingController _descriptionController;
+  late TextEditingController
+      _priceController; // متحكم لسعر المنتج بالدولار
+  late TextEditingController
+      _descriptionArController; // متحكم لوصف المنتج باللغة العربية
+  late TextEditingController
+      _descriptionEnController; // متحكم لوصف المنتج باللغة الإنجليزية
 
-  File? _pickedImage;
-  String? _currentImageUrl;
-  bool _isLoading = false;
+  File? _pickedImage; // الملف المحلي للصورة المختارة
+  String?
+      _currentImageUrl; // رابط الصورة الحالي للمنتج (إذا كان موجوداً)
+  bool _isLoading = false; // لإظهار مؤشر التحميل
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(
-      text: widget.product?.name ?? '',
+    // تهيئة المتحكمات بقيم المنتج الموجود (إذا كان تعديلاً) أو قيم فارغة (إذا كان إضافة)
+    _nameArController = TextEditingController(
+      text: widget.product?.name['ar'] ?? '',
+    );
+    _nameEnController = TextEditingController(
+      text: widget.product?.name['en'] ?? '',
     );
     _productNumberController = TextEditingController(
       text: widget.product?.productNumber ?? '',
     );
     _priceController = TextEditingController(
-      text: widget.product?.price.toString() ?? '',
+      text: widget.product?.price.toString() ??
+          '', // السعر الافتراضي بالدولار
     );
-    _descriptionController = TextEditingController(
-      text: widget.product?.description ?? '',
+    _descriptionArController = TextEditingController(
+      text: widget.product?.description['ar'] ?? '',
+    );
+    _descriptionEnController = TextEditingController(
+      text: widget.product?.description['en'] ?? '',
     );
     _currentImageUrl = widget.product?.imageUrl;
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    // التخلص من المتحكمات لتجنب تسرب الذاكرة
+    _nameArController.dispose();
+    _nameEnController.dispose();
     _productNumberController.dispose();
     _priceController.dispose();
-    _descriptionController.dispose();
+    _descriptionArController.dispose();
+    _descriptionEnController.dispose();
     super.dispose();
   }
 
+  /// دالة مساعدة لعرض رسائل SnackBar للمستخدم.
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -2606,25 +3204,25 @@ class _ManageProductScreenState
     );
   }
 
+  /// دالة لاختيار صورة من معرض الصور.
   Future<void> _pickImage() async {
     final appLocalizations = AppLocalizations.of(context)!;
     final pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 50,
+      imageQuality: 50, // جودة الصورة (لتقليل حجم الملف)
     );
     if (mounted) {
-      // Check mounted after async operation
       setState(() {
         if (pickedFile != null) {
           _pickedImage = File(pickedFile.path);
         } else {
-          // For production, consider using a logging framework instead of print
-          print(appLocalizations.imageNotSelected);
+          print(appLocalizations.imageNotSelected); // For debug
         }
       });
     }
   }
 
+  /// دالة لإرسال بيانات المنتج (إضافة أو تعديل).
   Future<void> _submitProduct() async {
     final appLocalizations = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) {
@@ -2632,6 +3230,7 @@ class _ManageProductScreenState
     }
     _formKey.currentState!.save();
 
+    // التحقق مما إذا تم اختيار صورة
     if (_pickedImage == null &&
         (_currentImageUrl == null ||
             _currentImageUrl!.isEmpty)) {
@@ -2639,38 +3238,67 @@ class _ManageProductScreenState
       return;
     }
 
-    if (mounted) {
-      setState(() {
-        _isLoading = true;
-      });
-    }
+    setState(() {
+      _isLoading = true; // بدء التحميل
+    });
 
     try {
+      // التحقق من تكرار رقم المنتج
+      bool productNumberExists =
+          await _firestoreService.checkProductNumberExists(
+        _productNumberController.text.trim(),
+        excludeProductId: widget.product
+            ?.id, // استبعاد المنتج الحالي إذا كان تعديلاً
+      );
+
+      if (productNumberExists) {
+        _showSnackBar(appLocalizations.productNumberExists,
+            isError: true);
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
       String? imageUrlToSave = _currentImageUrl;
 
+      // إذا تم اختيار صورة جديدة، قم بتحميلها إلى Cloudinary
       if (_pickedImage != null) {
         if (widget.product != null &&
             widget.product!.imageUrl.isNotEmpty) {
-          // For production, consider using a logging framework instead of print
-          print(appLocalizations.skippingOldImageDeletion);
+          print(appLocalizations
+              .skippingOldImageDeletion); // For debug
         }
         imageUrlToSave =
             await _storageService.uploadProductImage(
           _pickedImage!,
           widget.product?.id ??
-              DateTime.now().millisecondsSinceEpoch.toString(),
+              DateTime.now()
+                  .millisecondsSinceEpoch
+                  .toString(), // استخدام ID فريد للصورة
         );
       }
 
+      // إنشاء كائن المنتج الجديد أو المحدث
       final newProduct = Product(
         id: widget.product?.id ?? '',
-        name: _nameController.text.trim(),
+        name: {
+          'ar': _nameArController.text.trim(),
+          'en': _nameEnController.text.trim(),
+        },
         productNumber: _productNumberController.text.trim(),
-        description: _descriptionController.text.trim(),
-        price: double.parse(_priceController.text.trim()),
+        description: {
+          'ar': _descriptionArController.text.trim(),
+          'en': _descriptionEnController.text.trim(),
+        },
+        price: double.parse(
+            _priceController.text.trim()), // حفظ السعر بالدولار
         imageUrl: imageUrlToSave ?? '',
       );
 
+      // إضافة أو تحديث المنتج في Firestore
       if (widget.product == null) {
         await _firestoreService.addProduct(newProduct);
         _showSnackBar(appLocalizations.productAdded);
@@ -2682,7 +3310,7 @@ class _ManageProductScreenState
         _showSnackBar(appLocalizations.productUpdated);
       }
       if (mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(); // العودة إلى الشاشة السابقة
       }
     } catch (e) {
       _showSnackBar(
@@ -2700,7 +3328,8 @@ class _ManageProductScreenState
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.product != null;
+    final isEditing = widget.product !=
+        null; // لتحديد ما إذا كنا في وضع التعديل أو الإضافة
     final appLocalizations = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
@@ -2720,10 +3349,12 @@ class _ManageProductScreenState
             children: [
               Center(
                 child: GestureDetector(
-                  onTap: _pickImage,
+                  onTap:
+                      _pickImage, // عند النقر، يتم فتح معرض الصور
                   child: CircleAvatar(
                     radius: 80,
                     backgroundColor: Colors.grey[200],
+                    // عرض الصورة المختارة أو الصورة الحالية للمنتج
                     backgroundImage: _pickedImage != null
                         ? FileImage(_pickedImage!)
                         : (_currentImageUrl != null &&
@@ -2731,6 +3362,7 @@ class _ManageProductScreenState
                             ? NetworkImage(_currentImageUrl!)
                                 as ImageProvider
                             : null),
+                    // عرض أيقونة الكاميرا إذا لم تكن هناك صورة
                     child: (_pickedImage == null &&
                             (_currentImageUrl == null ||
                                 _currentImageUrl!.isEmpty))
@@ -2744,15 +3376,31 @@ class _ManageProductScreenState
                 ),
               ),
               const SizedBox(height: 20),
+              // حقل اسم المنتج (العربية)
               TextFormField(
-                controller: _nameController,
+                controller: _nameArController,
                 decoration: InputDecoration(
-                  labelText: appLocalizations.productName,
+                  labelText: appLocalizations.productNameAr,
                   prefixIcon: const Icon(Icons.text_fields),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return appLocalizations.enterProductName;
+                    return appLocalizations.enterProductNameAr;
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              // حقل اسم المنتج (الإنجليزية)
+              TextFormField(
+                controller: _nameEnController,
+                decoration: InputDecoration(
+                  labelText: appLocalizations.productNameEn,
+                  prefixIcon: const Icon(Icons.text_fields),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return appLocalizations.enterProductNameEn;
                   }
                   return null;
                 },
@@ -2776,7 +3424,8 @@ class _ManageProductScreenState
                 controller: _priceController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: appLocalizations.priceSAR,
+                  labelText: appLocalizations
+                      .priceUSD, // تغيير التسمية إلى دولار
                   prefixIcon: const Icon(Icons.attach_money),
                 ),
                 validator: (value) {
@@ -2789,18 +3438,39 @@ class _ManageProductScreenState
                 },
               ),
               const SizedBox(height: 16),
+              // حقل وصف المنتج (العربية)
               TextFormField(
-                controller: _descriptionController,
+                controller: _descriptionArController,
                 maxLines: 4,
                 decoration: InputDecoration(
-                  labelText: appLocalizations.description,
+                  labelText:
+                      appLocalizations.productDescriptionAr,
                   alignLabelWithHint: true,
                   prefixIcon: const Icon(Icons.description),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return appLocalizations
-                        .enterProductDescription;
+                        .enterProductDescriptionAr;
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              // حقل وصف المنتج (الإنجليزية)
+              TextFormField(
+                controller: _descriptionEnController,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  labelText:
+                      appLocalizations.productDescriptionEn,
+                  alignLabelWithHint: true,
+                  prefixIcon: const Icon(Icons.description),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return appLocalizations
+                        .enterProductDescriptionEn;
                   }
                   return null;
                 },

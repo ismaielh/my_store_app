@@ -107,6 +107,23 @@
   "changeLanguage": "تغيير اللغة",
 "selectLanguage": "اختر اللغة",
 "languageChangedSuccessfully": "تم تغيير اللغة بنجاح!",
-"enterCurrentPassword": "الرجاء إدخال كلمة المرور الحالية."
+"enterCurrentPassword": "الرجاء إدخال كلمة المرور الحالية.",
+"customerName": "اسم العميل",
+"customerAddress": "عنوان العميل",
+"productNumberExists": "رقم المنتج موجود بالفعل. الرجاء إدخال رقم فريد.",
+"currencySymbol": "ل.س",
+"priceUSD": "السعر (دولار)",
+"dollarExchangeRate": "سعر صرف الدولار (ل.س)",
+"enterDollarExchangeRate": "الرجاء إدخال سعر صرف الدولار.",
+"syrianPound": "ل.س",
+"dollarExchangeRateUpdated": "تم تحديث سعر صرف الدولار بنجاح!",
+"productNameAr": "اسم المنتج (العربية)",
+"productNameEn": "اسم المنتج (الإنجليزية)",
+"productDescriptionAr": "وصف المنتج (العربية)",
+"productDescriptionEn": "وصف المنتج (الإنجليزية)",
+"enterProductNameAr": "الرجاء إدخال اسم المنتج باللغة العربية.",
+"enterProductNameEn": "الرجاء إدخال اسم المنتج باللغة الإنجليزية.",
+"enterProductDescriptionAr": "الرجاء إدخال وصف المنتج باللغة العربية.",
+"enterProductDescriptionEn": "الرجاء إدخال وصف المنتج باللغة الإنجليزية."
 
 }

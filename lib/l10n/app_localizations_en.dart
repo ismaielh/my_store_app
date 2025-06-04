@@ -309,7 +309,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quantity => 'Quantity';
 
   @override
-  String get currencySymbol => 'SAR';
+  String get currencySymbol => 'SYP';
 
   @override
   String get whatsappOrderStart =>
@@ -351,4 +351,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get enterCurrentPassword => 'Please enter your current password.';
+
+  @override
+  String get customerName => 'Customer Name';
+
+  @override
+  String get customerAddress => 'Customer Address';
+
+  @override
+  String get productNumberExists =>
+      'Product number already exists. Please enter a unique number.';
+
+  @override
+  String get priceUSD => 'Price (USD)';
+
+  @override
+  String get dollarExchangeRate => 'Dollar Exchange Rate (SYP)';
+
+  @override
+  String get enterDollarExchangeRate =>
+      'Please enter the dollar exchange rate.';
+
+  @override
+  String get syrianPound => 'SYP';
+
+  @override
+  String get dollarExchangeRateUpdated =>
+      'Dollar exchange rate updated successfully!';
+
+  @override
+  String get productNameAr => 'Product Name (Arabic)';
+
+  @override
+  String get productNameEn => 'Product Name (English)';
+
+  @override
+  String get productDescriptionAr => 'Product Description (Arabic)';
+
+  @override
+  String get productDescriptionEn => 'Product Description (English)';
+
+  @override
+  String get enterProductNameAr => 'Please enter product name in Arabic.';
+
+  @override
+  String get enterProductNameEn => 'Please enter product name in English.';
+
+  @override
+  String get enterProductDescriptionAr =>
+      'Please enter product description in Arabic.';
+
+  @override
+  String get enterProductDescriptionEn =>
+      'Please enter product description in English.';
 }

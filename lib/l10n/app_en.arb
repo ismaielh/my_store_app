@@ -107,5 +107,22 @@
   "changeLanguage": "Change Language",
 "selectLanguage": "Select Language",
 "languageChangedSuccessfully": "Language changed successfully!",
-"enterCurrentPassword": "Please enter your current password."
+"enterCurrentPassword": "Please enter your current password.",
+"customerName": "Customer Name",
+"customerAddress": "Customer Address",
+"productNumberExists": "Product number already exists. Please enter a unique number.",
+"currencySymbol": "SYP",
+"priceUSD": "Price (USD)",
+"dollarExchangeRate": "Dollar Exchange Rate (SYP)",
+"enterDollarExchangeRate": "Please enter the dollar exchange rate.",
+"syrianPound": "SYP",
+"dollarExchangeRateUpdated": "Dollar exchange rate updated successfully!",
+"productNameAr": "Product Name (Arabic)",
+"productNameEn": "Product Name (English)",
+"productDescriptionAr": "Product Description (Arabic)",
+"productDescriptionEn": "Product Description (English)",
+"enterProductNameAr": "Please enter product name in Arabic.",
+"enterProductNameEn": "Please enter product name in English.",
+"enterProductDescriptionAr": "Please enter product description in Arabic.",
+"enterProductDescriptionEn": "Please enter product description in English."
 }

@@ -308,7 +308,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get quantity => 'الكمية';
 
   @override
-  String get currencySymbol => 'ر.س';
+  String get currencySymbol => 'ل.س';
 
   @override
   String get whatsappOrderStart => 'مرحباً، أود طلب المنتجات التالية:\n\n';
@@ -349,4 +349,55 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get enterCurrentPassword => 'الرجاء إدخال كلمة المرور الحالية.';
+
+  @override
+  String get customerName => 'اسم العميل';
+
+  @override
+  String get customerAddress => 'عنوان العميل';
+
+  @override
+  String get productNumberExists =>
+      'رقم المنتج موجود بالفعل. الرجاء إدخال رقم فريد.';
+
+  @override
+  String get priceUSD => 'السعر (دولار)';
+
+  @override
+  String get dollarExchangeRate => 'سعر صرف الدولار (ل.س)';
+
+  @override
+  String get enterDollarExchangeRate => 'الرجاء إدخال سعر صرف الدولار.';
+
+  @override
+  String get syrianPound => 'ل.س';
+
+  @override
+  String get dollarExchangeRateUpdated => 'تم تحديث سعر صرف الدولار بنجاح!';
+
+  @override
+  String get productNameAr => 'اسم المنتج (العربية)';
+
+  @override
+  String get productNameEn => 'اسم المنتج (الإنجليزية)';
+
+  @override
+  String get productDescriptionAr => 'وصف المنتج (العربية)';
+
+  @override
+  String get productDescriptionEn => 'وصف المنتج (الإنجليزية)';
+
+  @override
+  String get enterProductNameAr => 'الرجاء إدخال اسم المنتج باللغة العربية.';
+
+  @override
+  String get enterProductNameEn => 'الرجاء إدخال اسم المنتج باللغة الإنجليزية.';
+
+  @override
+  String get enterProductDescriptionAr =>
+      'الرجاء إدخال وصف المنتج باللغة العربية.';
+
+  @override
+  String get enterProductDescriptionEn =>
+      'الرجاء إدخال وصف المنتج باللغة الإنجليزية.';
 }
