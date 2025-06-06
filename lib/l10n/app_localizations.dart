@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @appName.
   ///
   /// In en, this message translates to:
-  /// **'My E-Store'**
+  /// **'My Online Store'**
   String get appName;
 
   /// No description provided for @email.
@@ -161,7 +161,7 @@ abstract class AppLocalizations {
   /// No description provided for @forgotPassword.
   ///
   /// In en, this message translates to:
-  /// **'Forgot Password?'**
+  /// **'Forgot password?'**
   String get forgotPassword;
 
   /// No description provided for @emailRequired.
@@ -173,13 +173,13 @@ abstract class AppLocalizations {
   /// No description provided for @passwordLength.
   ///
   /// In en, this message translates to:
-  /// **'Password must be at least 6 characters.'**
+  /// **'Password must be at least 6 characters long.'**
   String get passwordLength;
 
   /// No description provided for @passwordMismatch.
   ///
   /// In en, this message translates to:
-  /// **'Passwords do not match.'**
+  /// **'Password and confirm password do not match.'**
   String get passwordMismatch;
 
   /// No description provided for @authError.
@@ -191,13 +191,13 @@ abstract class AppLocalizations {
   /// No description provided for @userNotFound.
   ///
   /// In en, this message translates to:
-  /// **'No user found for that email.'**
+  /// **'No user found with this email.'**
   String get userNotFound;
 
   /// No description provided for @wrongPassword.
   ///
   /// In en, this message translates to:
-  /// **'Wrong password provided.'**
+  /// **'Incorrect password.'**
   String get wrongPassword;
 
   /// No description provided for @emailAlreadyInUse.
@@ -221,7 +221,7 @@ abstract class AppLocalizations {
   /// No description provided for @networkError.
   ///
   /// In en, this message translates to:
-  /// **'Network connection failed. Please check your internet.'**
+  /// **'Network connection failed. Please check your internet connection.'**
   String get networkError;
 
   /// No description provided for @accountCreated.
@@ -239,7 +239,7 @@ abstract class AppLocalizations {
   /// No description provided for @resetPasswordEmailSent.
   ///
   /// In en, this message translates to:
-  /// **'Password reset link sent to your email.'**
+  /// **'Password reset link has been sent to your email.'**
   String get resetPasswordEmailSent;
 
   /// No description provided for @resetPasswordTitle.
@@ -269,7 +269,7 @@ abstract class AppLocalizations {
   /// No description provided for @passwordChangeFailed.
   ///
   /// In en, this message translates to:
-  /// **'Password change failed.'**
+  /// **'Failed to change password.'**
   String get passwordChangeFailed;
 
   /// No description provided for @wrongCurrentPassword.
@@ -281,7 +281,7 @@ abstract class AppLocalizations {
   /// No description provided for @reauthenticateRequired.
   ///
   /// In en, this message translates to:
-  /// **'Please log in again to change password.'**
+  /// **'Please re-authenticate to change password.'**
   String get reauthenticateRequired;
 
   /// No description provided for @errorOccurred.
@@ -359,7 +359,7 @@ abstract class AppLocalizations {
   /// No description provided for @selectImage.
   ///
   /// In en, this message translates to:
-  /// **'Please select a product image.'**
+  /// **'Please select an image for the product.'**
   String get selectImage;
 
   /// No description provided for @productAdded.
@@ -419,7 +419,7 @@ abstract class AppLocalizations {
   /// No description provided for @whatsappNotInstalled.
   ///
   /// In en, this message translates to:
-  /// **'WhatsApp is not installed on your device.'**
+  /// **'Cannot open WhatsApp. Please ensure it is installed on your device.'**
   String get whatsappNotInstalled;
 
   /// No description provided for @orderSent.
@@ -449,7 +449,7 @@ abstract class AppLocalizations {
   /// No description provided for @confirmDeleteProduct.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to delete \"{productName}\"?'**
+  /// **'Are you sure you want to delete the product \"{productName}\"?'**
   String confirmDeleteProduct(Object productName);
 
   /// No description provided for @cancel.
@@ -467,7 +467,7 @@ abstract class AppLocalizations {
   /// No description provided for @noProducts.
   ///
   /// In en, this message translates to:
-  /// **'No products available currently. Click the add button to add a new product.'**
+  /// **'No products available currently. Press the add button to add a new product.'**
   String get noProducts;
 
   /// No description provided for @saveChanges.
@@ -485,7 +485,7 @@ abstract class AppLocalizations {
   /// No description provided for @loginRequired.
   ///
   /// In en, this message translates to:
-  /// **'Please log in to continue.'**
+  /// **'Please login to continue.'**
   String get loginRequired;
 
   /// No description provided for @emailVerificationNeeded.
@@ -515,7 +515,7 @@ abstract class AppLocalizations {
   /// No description provided for @whatsappChoiceMessage.
   ///
   /// In en, this message translates to:
-  /// **'Which WhatsApp app would you like to use to send the order?'**
+  /// **'Which WhatsApp application would you like to use to send the order?'**
   String get whatsappChoiceMessage;
 
   /// No description provided for @whatsappStandard.
@@ -587,13 +587,13 @@ abstract class AppLocalizations {
   /// No description provided for @productAddedToCart.
   ///
   /// In en, this message translates to:
-  /// **'Added {productName} to cart!'**
+  /// **'{productName} added to cart!'**
   String productAddedToCart(Object productName);
 
   /// No description provided for @productQuantityAddedToCart.
   ///
   /// In en, this message translates to:
-  /// **'Added {productName} (Quantity: {quantity}) to cart!'**
+  /// **'{productName} (Qty: {quantity}) added to cart!'**
   String productQuantityAddedToCart(Object productName, Object quantity);
 
   /// No description provided for @productRemovedFromCart.
@@ -623,25 +623,25 @@ abstract class AppLocalizations {
   /// No description provided for @enterProductNumber.
   ///
   /// In en, this message translates to:
-  /// **'Please enter a product number.'**
+  /// **'Please enter the product number.'**
   String get enterProductNumber;
 
   /// No description provided for @enterProductName.
   ///
   /// In en, this message translates to:
-  /// **'Please enter product name.'**
+  /// **'Please enter the product name.'**
   String get enterProductName;
 
   /// No description provided for @enterProductDescription.
   ///
   /// In en, this message translates to:
-  /// **'Please enter product description.'**
+  /// **'Please enter the product description.'**
   String get enterProductDescription;
 
   /// No description provided for @imageNotSelected.
   ///
   /// In en, this message translates to:
-  /// **'No image selected.'**
+  /// **'Image not selected.'**
   String get imageNotSelected;
 
   /// No description provided for @whatsappInquiryMessage.
@@ -701,13 +701,13 @@ abstract class AppLocalizations {
   /// No description provided for @notAvailable.
   ///
   /// In en, this message translates to:
-  /// **'Not Available'**
+  /// **'N/A'**
   String get notAvailable;
 
   /// No description provided for @skippingOldImageDeletion.
   ///
   /// In en, this message translates to:
-  /// **'Skipping old Cloudinary image deletion from client-side.'**
+  /// **'Skipping old image deletion from Cloudinary on client-side.'**
   String get skippingOldImageDeletion;
 
   /// No description provided for @newUser.
@@ -821,26 +821,80 @@ abstract class AppLocalizations {
   /// No description provided for @enterProductNameAr.
   ///
   /// In en, this message translates to:
-  /// **'Please enter product name in Arabic.'**
+  /// **'Please enter the product name in Arabic.'**
   String get enterProductNameAr;
 
   /// No description provided for @enterProductNameEn.
   ///
   /// In en, this message translates to:
-  /// **'Please enter product name in English.'**
+  /// **'Please enter the product name in English.'**
   String get enterProductNameEn;
 
   /// No description provided for @enterProductDescriptionAr.
   ///
   /// In en, this message translates to:
-  /// **'Please enter product description in Arabic.'**
+  /// **'Please enter the product description in Arabic.'**
   String get enterProductDescriptionAr;
 
   /// No description provided for @enterProductDescriptionEn.
   ///
   /// In en, this message translates to:
-  /// **'Please enter product description in English.'**
+  /// **'Please enter the product description in English.'**
   String get enterProductDescriptionEn;
+
+  /// No description provided for @productDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Product Detail'**
+  String get productDetail;
+
+  /// No description provided for @browse.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse'**
+  String get browse;
+
+  /// No description provided for @language.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get language;
+
+  /// No description provided for @addProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Product'**
+  String get addProduct;
+
+  /// No description provided for @onboardingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse & Buy Products Easily'**
+  String get onboardingTitle;
+
+  /// No description provided for @onboardingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore a wide selection of high-quality products, add to your cart, and send your orders via WhatsApp in simple steps.'**
+  String get onboardingSubtitle;
+
+  /// No description provided for @startTheCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Now'**
+  String get startTheCourse;
+
+  /// No description provided for @imagePickingWebDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Image picking from gallery is currently disabled for web.'**
+  String get imagePickingWebDisabled;
+
+  /// No description provided for @addingNewProductsWebDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding new products with images is not supported on web currently.'**
+  String get addingNewProductsWebDisabled;
 }
 
 class _AppLocalizationsDelegate

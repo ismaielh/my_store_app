@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appName => 'My E-Store';
+  String get appName => 'My Online Store';
 
   @override
   String get email => 'Email';
@@ -39,25 +39,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haveAccount => 'Already have an account? Login';
 
   @override
-  String get forgotPassword => 'Forgot Password?';
+  String get forgotPassword => 'Forgot password?';
 
   @override
   String get emailRequired => 'Please enter a valid email.';
 
   @override
-  String get passwordLength => 'Password must be at least 6 characters.';
+  String get passwordLength => 'Password must be at least 6 characters long.';
 
   @override
-  String get passwordMismatch => 'Passwords do not match.';
+  String get passwordMismatch => 'Password and confirm password do not match.';
 
   @override
   String get authError => 'Authentication error occurred.';
 
   @override
-  String get userNotFound => 'No user found for that email.';
+  String get userNotFound => 'No user found with this email.';
 
   @override
-  String get wrongPassword => 'Wrong password provided.';
+  String get wrongPassword => 'Incorrect password.';
 
   @override
   String get emailAlreadyInUse => 'This email is already in use.';
@@ -70,7 +70,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get networkError =>
-      'Network connection failed. Please check your internet.';
+      'Network connection failed. Please check your internet connection.';
 
   @override
   String get accountCreated => 'Account created successfully!';
@@ -80,7 +80,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resetPasswordEmailSent =>
-      'Password reset link sent to your email.';
+      'Password reset link has been sent to your email.';
 
   @override
   String get resetPasswordTitle => 'Reset Password';
@@ -95,14 +95,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmNewPassword => 'Confirm New Password';
 
   @override
-  String get passwordChangeFailed => 'Password change failed.';
+  String get passwordChangeFailed => 'Failed to change password.';
 
   @override
   String get wrongCurrentPassword => 'Current password is incorrect.';
 
   @override
   String get reauthenticateRequired =>
-      'Please log in again to change password.';
+      'Please re-authenticate to change password.';
 
   @override
   String get errorOccurred => 'An error occurred: ';
@@ -141,7 +141,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get description => 'Description';
 
   @override
-  String get selectImage => 'Please select a product image.';
+  String get selectImage => 'Please select an image for the product.';
 
   @override
   String get productAdded => 'Product added successfully!';
@@ -172,7 +172,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get whatsappNotInstalled =>
-      'WhatsApp is not installed on your device.';
+      'Cannot open WhatsApp. Please ensure it is installed on your device.';
 
   @override
   String get orderSent => 'Order sent via WhatsApp!';
@@ -188,7 +188,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String confirmDeleteProduct(Object productName) {
-    return 'Are you sure you want to delete \"$productName\"?';
+    return 'Are you sure you want to delete the product \"$productName\"?';
   }
 
   @override
@@ -199,7 +199,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noProducts =>
-      'No products available currently. Click the add button to add a new product.';
+      'No products available currently. Press the add button to add a new product.';
 
   @override
   String get saveChanges => 'Save Changes';
@@ -208,7 +208,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changePassword => 'Change Password';
 
   @override
-  String get loginRequired => 'Please log in to continue.';
+  String get loginRequired => 'Please login to continue.';
 
   @override
   String get emailVerificationNeeded =>
@@ -226,7 +226,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get whatsappChoiceMessage =>
-      'Which WhatsApp app would you like to use to send the order?';
+      'Which WhatsApp application would you like to use to send the order?';
 
   @override
   String get whatsappStandard => 'Standard WhatsApp';
@@ -266,12 +266,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String productAddedToCart(Object productName) {
-    return 'Added $productName to cart!';
+    return '$productName added to cart!';
   }
 
   @override
   String productQuantityAddedToCart(Object productName, Object quantity) {
-    return 'Added $productName (Quantity: $quantity) to cart!';
+    return '$productName (Qty: $quantity) added to cart!';
   }
 
   @override
@@ -287,16 +287,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get enterValidPrice => 'Please enter a valid price.';
 
   @override
-  String get enterProductNumber => 'Please enter a product number.';
+  String get enterProductNumber => 'Please enter the product number.';
 
   @override
-  String get enterProductName => 'Please enter product name.';
+  String get enterProductName => 'Please enter the product name.';
 
   @override
-  String get enterProductDescription => 'Please enter product description.';
+  String get enterProductDescription => 'Please enter the product description.';
 
   @override
-  String get imageNotSelected => 'No image selected.';
+  String get imageNotSelected => 'Image not selected.';
 
   @override
   String get whatsappInquiryMessage =>
@@ -328,11 +328,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get address => 'Address';
 
   @override
-  String get notAvailable => 'Not Available';
+  String get notAvailable => 'N/A';
 
   @override
   String get skippingOldImageDeletion =>
-      'Skipping old Cloudinary image deletion from client-side.';
+      'Skipping old image deletion from Cloudinary on client-side.';
 
   @override
   String get newUser => 'New User';
@@ -392,16 +392,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get productDescriptionEn => 'Product Description (English)';
 
   @override
-  String get enterProductNameAr => 'Please enter product name in Arabic.';
+  String get enterProductNameAr => 'Please enter the product name in Arabic.';
 
   @override
-  String get enterProductNameEn => 'Please enter product name in English.';
+  String get enterProductNameEn => 'Please enter the product name in English.';
 
   @override
   String get enterProductDescriptionAr =>
-      'Please enter product description in Arabic.';
+      'Please enter the product description in Arabic.';
 
   @override
   String get enterProductDescriptionEn =>
-      'Please enter product description in English.';
+      'Please enter the product description in English.';
+
+  @override
+  String get productDetail => 'Product Detail';
+
+  @override
+  String get browse => 'Browse';
+
+  @override
+  String get language => 'Language';
+
+  @override
+  String get addProduct => 'Add Product';
+
+  @override
+  String get onboardingTitle => 'Browse & Buy Products Easily';
+
+  @override
+  String get onboardingSubtitle =>
+      'Explore a wide selection of high-quality products, add to your cart, and send your orders via WhatsApp in simple steps.';
+
+  @override
+  String get startTheCourse => 'Start Now';
+
+  @override
+  String get imagePickingWebDisabled =>
+      'Image picking from gallery is currently disabled for web.';
+
+  @override
+  String get addingNewProductsWebDisabled =>
+      'Adding new products with images is not supported on web currently.';
 }

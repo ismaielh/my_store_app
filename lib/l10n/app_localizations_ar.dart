@@ -400,4 +400,34 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get enterProductDescriptionEn =>
       'الرجاء إدخال وصف المنتج باللغة الإنجليزية.';
+
+  @override
+  String get productDetail => 'تفاصيل المنتج';
+
+  @override
+  String get browse => 'تصفح';
+
+  @override
+  String get language => 'اللغة';
+
+  @override
+  String get addProduct => 'إضافة منتج';
+
+  @override
+  String get onboardingTitle => 'تصفح وشراء المنتجات بسهولة';
+
+  @override
+  String get onboardingSubtitle =>
+      'استكشف مجموعة واسعة من المنتجات عالية الجودة، وأضفها إلى سلتك، وأرسل طلباتك عبر واتساب بخطوات بسيطة.';
+
+  @override
+  String get startTheCourse => 'ابدأ الآن';
+
+  @override
+  String get imagePickingWebDisabled =>
+      'اختيار الصور من المعرض غير مدعوم حالياً للويب.';
+
+  @override
+  String get addingNewProductsWebDisabled =>
+      'إضافة منتجات جديدة بالصور غير مدعومة حالياً على الويب.';
 }

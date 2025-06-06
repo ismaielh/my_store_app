@@ -67,6 +67,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '491773887662',
     projectId: 'storeapp-975b9',
     storageBucket: 'storeapp-975b9.firebasestorage.app',
+    iosClientId: '491773887662-ocqvb6i3elmo35s2hht20dadk7porsgn.apps.googleusercontent.com',
     iosBundleId: 'com.example.myStoreApp',
   );
 
@@ -79,4 +80,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'storeapp-975b9.firebasestorage.app',
     measurementId: 'G-RWNMV6ZMGV',
   );
+
 }
